@@ -36,6 +36,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prepare direct admin route
+        run: mkdir -p dist/admin && cp dist/index.html dist/admin/index.html
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
