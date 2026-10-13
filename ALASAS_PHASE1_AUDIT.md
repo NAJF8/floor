@@ -44,10 +44,29 @@ Production Firebase data, and it does not push or deploy either repository.
 - The existing admin app reads/writes several paths, but its generic CRUD is not
   yet a complete order, payment, inventory, audit, or permission workflow.
 
+## Local backend progress
+
+- Added a local-only `functions/createOrder` callable. It requires Firebase Auth,
+  reads product prices/payment methods/delivery fees from the database, ignores
+  client totals, starts every order with an unpaid or pending-review payment
+  state, and uses a per-user idempotency key.
+- Auth, RTDB, and Functions emulators were started with synthetic data only.
+  The integration read back a 75,000 IQD order, returned `UNPAID`, reused the
+  same order ID on retry, and rejected an unauthenticated call. No emulator
+  data or credentials were sent to Production.
+- The customer UI now uses a product-id/quantity cart, reads the live catalog,
+  requires Google sign-in before calling `createOrder`, and displays the
+  server-returned order ID and total. Preview products are visibly blocked from
+  checkout. Payment approval, inventory reservation, and delivery configuration
+  migration remain incomplete.
+
 ## Blocking gaps before a Production release
 
 1. Customer checkout cannot currently create orders under the local rules,
-   while broad private reads would expose too much data to any active member.
+   because the callable is only locally emulated and is not deployed. Production
+   also has no published catalog/delivery/payment configuration to accept a real
+   order, while broad private reads would expose too much data to any active
+   member.
 2. Payment confirmation and stock reservation need a trusted atomic backend or
    carefully tested transaction/rules design; a browser button is not financial
    proof.
@@ -70,6 +89,8 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | NOT VERIFIED | No Production write performed |
-| Orders/payments/inventory | BLOCKED | No trusted backend and no safe isolated acceptance environment |
+| Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
+| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs and callable client are wired; no deployed callable or authenticated browser acceptance |
+| Payment approval/inventory | BLOCKED | Approval and idempotent stock reservation are not implemented |
 | GitHub image upload | BLOCKED | Server-side credential/service not present |
 
