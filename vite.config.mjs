@@ -1,7 +1,8 @@
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: process.env.BASE_PATH || '/',
+  base: '/floor/',
   plugins: [react()],
 })
+
