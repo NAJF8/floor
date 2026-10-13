@@ -114,6 +114,8 @@ export function calculateOrder(input, products, delivery, paymentMethods, discou
       quantity,
       unitPrice: product.price,
       image: typeof product.image === 'string' ? product.image : Array.isArray(product.imageUrls) && typeof product.imageUrls[0] === 'string' ? product.imageUrls[0] : '',
+      packaging: typeof product.packaging === 'string' ? product.packaging : '',
+      addOns: Array.isArray(product.addOns) ? product.addOns.filter((item) => typeof item === 'string') : [],
       inventoryRecipe: normalizeRecipe(product.inventoryRecipe || product.recipe),
       lineTotal: product.price * quantity,
     }

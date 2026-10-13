@@ -274,6 +274,7 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
   if (claimValue?.status === 'COMPLETE' && claimValue.orderId) return { orderId: claimValue.orderId, reused: true }
   const orderId = claimValue?.orderId || candidateOrderId
   let discountReservation = null
+  let preparedOrder = null
 
   try {
     const [productsSnapshot, deliverySnapshot, paymentSnapshot, discountsSnapshot] = await Promise.all([
@@ -283,6 +284,7 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
       database.ref(`shops/${SHOP_ID}/public/discounts`).get(),
     ])
     const order = calculateOrder(input, productsSnapshot.val() || {}, deliverySnapshot.val() || {}, paymentSnapshot.val() || {}, discountsSnapshot.val() || {})
+    preparedOrder = order
     if (order.discountDetail?.id) {
       const discountRef = database.ref(`shops/${SHOP_ID}/public/discounts/${order.discountDetail.id}`)
       const discountSnapshot = await discountRef.get()
@@ -338,7 +340,7 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
           return count > 0 ? count - 1 : 0
         })
       } catch (compensationError) {
-        console.error('Discount reservation compensation failed', { orderId, discountId: order.discountDetail?.id, compensationError })
+        console.error('Discount reservation compensation failed', { orderId, discountId: preparedOrder?.discountDetail?.id, compensationError })
       }
     }
     throw toHttpsError(error)

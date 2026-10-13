@@ -83,6 +83,9 @@ Production Firebase data, and it does not push or deploy either repository.
 - Customer Home now subscribes to visible public categories and uses them for
   its category cards, while retaining the existing visual fallback when no
   published categories exist.
+- Admin Categories now has a structured editor for Arabic/English names,
+  descriptions, image, icon, order, visibility, and featured state. A linked
+  category is archived and hidden rather than deleting its products.
 - Customer favorites now persist locally for anonymous visitors and render in
   the Favorites page; Google-account synchronization remains intentionally
   unimplemented until a safe user-scoped backend path is added.
@@ -91,6 +94,9 @@ Production Firebase data, and it does not push or deploy either repository.
   the requested order. Synthetic emulator readback returned the owner's
   `PREPARING` order and 45,000 IQD total, while a second synthetic UID received
   `NOT_FOUND`.
+- Customer and Admin now prepare WhatsApp order/approval messages with a
+  tracking URL; opening WhatsApp is explicitly not treated as proof of sending
+  or payment.
 - Admin Dashboard now derives period-scoped confirmed sales, payment/order
   statuses, discounts, recent orders, and low-stock alerts from its authorized
   Firebase reads. It is still local-only and has no live authenticated browser
@@ -114,6 +120,9 @@ Production Firebase data, and it does not push or deploy either repository.
   catalog/settings mutation. Emulator readback confirmed a Manager-created
   product and its matching audit entry; Viewer writes and sensitive CVV input
   were rejected.
+- Admin Orders displays transfer references when present and exposes the
+  approval message only after payment is confirmed; the message is a user-
+  initiated WhatsApp link, not an automatic notification.
 - Latest synthetic approval readback: order total `40,000`, payment
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
@@ -162,6 +171,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Favorites | BUILD PASS; local visitor behavior NOT VERIFIED | LocalStorage persistence and Favorites rendering are wired; account sync is not implemented |
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
+| WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |

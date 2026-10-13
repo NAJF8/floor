@@ -12,7 +12,7 @@ import { firebaseAuth, firebaseFunctions, googleProvider } from './firebase'
 const image = (id: string, width = 900, height = 1100) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&h=${height}&q=88`
 const logo = `${import.meta.env.BASE_URL}alasas-logo.jpg`
 
-type Product = { id: string; name: string; en: string; price: number; compareAtPrice?: number; discountPercent?: number; category: string; image: string; badge?: string; tone: string; description: string }
+type Product = { id: string; name: string; en: string; price: number; compareAtPrice?: number; discountPercent?: number; category: string; image: string; badge?: string; packaging?: string; addOns?: string[]; tone: string; description: string }
 const products: Product[] = [
   { id: 'classic-red', name: 'باقة الورد الأحمر الكلاسيكية', en: 'Classic Red Roses', price: 35000, category: 'باقات الورد', image: image('photo-1548094971-2e4a2a1f13a4'), badge: 'الأكثر طلباً', tone: '#8f273b', description: 'ورد أحمر غني بتنسيق أنيق يعبّر عن المشاعر الكبيرة.' },
   { id: 'white-cloud', name: 'باقة الغيمة البيضاء', en: 'White Cloud Bouquet', price: 42000, category: 'الورد الطبيعي', image: image('photo-1561181286-d3fee7d55364'), tone: '#eadfd0', description: 'تنسيق هادئ من الأبيض واللمسات الخضراء الطبيعية.' },
@@ -42,6 +42,8 @@ function mapCatalogProduct(record: FlowerProductRecord): Product {
     price: record.price,
     ...(record.compareAtPrice ? { compareAtPrice: record.compareAtPrice } : {}),
     ...(record.discountPercent ? { discountPercent: record.discountPercent } : {}),
+    ...(record.packaging ? { packaging: record.packaging } : {}),
+    ...(record.addOns?.length ? { addOns: record.addOns } : {}),
     category: record.category,
     image: record.image || record.imageUrls?.[0] || fallbackProductImage,
     description: record.description || 'منتج متاح من متجر الأساس.',
@@ -223,7 +225,10 @@ function CheckoutConnected({ cart }: { cart: CartState }) {
     const whatsapp = typeof publicConfig.settings.whatsapp === 'string' ? publicConfig.settings.whatsapp.replace(/\D/g, '') : ''
     if (!whatsapp) return ''
     const productsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId} × ${item.quantity}` }).join('\n')
-    const message = [`طلب جديد — ${String(publicConfig.settings.storeName || 'AL ASAS')}`, `رقم الطلب: ${orderId}`, `اسم الزبون: ${customerName}`, `رقم الهاتف: ${phone}`, `المستلم: ${recipientName}`, `المنتجات:\n${productsText}`, `رسالة الإهداء: ${giftMessage || 'لا توجد'}`, `المحافظة: ${province}`, `المنطقة: ${district}`, `العنوان: ${address}`, `موعد التوصيل: ${deliveryAt}`, `الإجمالي: ${money(total)}`, `طريقة الدفع: ${method.name}`, `مرجع التحويل: ${transferReference || 'لا يوجد'}`, `حالة الدفع: ${selectedPayment?.type === 'CASH' ? 'غير مدفوع' : 'بانتظار المراجعة'}`].join('\n')
+    const packagingText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId}: ${product?.packaging || 'غير محدد'}` }).join('\n')
+    const addOnsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId}: ${product?.addOns?.join('، ') || 'لا توجد'}` }).join('\n')
+    const trackingUrl = `${window.location.origin}${import.meta.env.BASE_URL}track-order?order=${encodeURIComponent(orderId)}`
+    const message = [`طلب جديد — ${String(publicConfig.settings.storeName || 'AL ASAS')}`, `رقم الطلب: ${orderId}`, `اسم الزبون: ${customerName}`, `رقم الهاتف: ${phone}`, `المستلم: ${recipientName}`, `المنتجات:\n${productsText}`, `التغليف:\n${packagingText}`, `الإضافات:\n${addOnsText}`, `رسالة الإهداء: ${giftMessage || 'لا توجد'}`, `المحافظة: ${province}`, `المنطقة: ${district}`, `العنوان: ${address}`, `موعد التوصيل: ${deliveryAt}`, `الإجمالي: ${money(total)}`, `طريقة الدفع: ${method.name}`, `مرجع التحويل: ${transferReference || 'لا يوجد'}`, `حالة الدفع: ${selectedPayment?.type === 'CASH' ? 'غير مدفوع' : 'بانتظار المراجعة'}`, `رابط الطلب: ${trackingUrl}`].join('\n')
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
   }
   const submit = async (event: React.FormEvent) => {

@@ -13,6 +13,8 @@ export type FlowerProductRecord = {
   compareAtPrice?: number
   discountPercent?: number
   badge?: string
+  packaging?: string
+  addOns?: string[]
   active?: boolean
   status?: string
   stock?: number
@@ -83,6 +85,8 @@ export function subscribeToShopProducts(
         ...(Number.isInteger(record.compareAtPrice) && (record.compareAtPrice as number) > Number(record.price) ? { compareAtPrice: record.compareAtPrice as number } : {}),
         ...(Number.isInteger(record.discountPercent) && (record.discountPercent as number) > 0 ? { discountPercent: record.discountPercent as number } : {}),
         ...(typeof record.badge === 'string' ? { badge: record.badge } : {}),
+        ...(typeof record.packaging === 'string' ? { packaging: record.packaging } : {}),
+        ...(Array.isArray(record.addOns) ? { addOns: record.addOns.filter((item): item is string => typeof item === 'string') } : {}),
         ...(typeof record.status === 'string' ? { status: record.status } : {}),
         ...(typeof record.stock === 'number' ? { stock: record.stock } : {}),
         active: true,
