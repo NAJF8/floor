@@ -77,6 +77,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - Customer Home now subscribes to visible public categories and uses them for
   its category cards, while retaining the existing visual fallback when no
   published categories exist.
+- Admin Dashboard now derives period-scoped confirmed sales, payment/order
+  statuses, discounts, recent orders, and low-stock alerts from its authorized
+  Firebase reads. It is still local-only and has no live authenticated browser
+  acceptance yet.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
@@ -128,6 +132,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor and status filtering are local-only; no Production write performed |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
+| Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
 | Coupon pricing and usage | PASS (emulator only) | Server pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
