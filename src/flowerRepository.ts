@@ -37,7 +37,7 @@ export function subscribeToShopProducts(
     for (const [id, item] of Object.entries(value)) {
       if (!item || typeof item !== 'object' || Array.isArray(item)) continue
       const record = item as Record<string, unknown>
-      if (typeof record.name !== 'string' || !Number.isFinite(record.price) || typeof record.category !== 'string') continue
+      if (typeof record.name !== 'string' || typeof record.price !== 'number' || !Number.isFinite(record.price) || typeof record.category !== 'string') continue
       if (record.active === false) continue
       products.push({
         id,
