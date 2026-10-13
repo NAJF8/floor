@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getDatabase } from 'firebase/database'
 
 // Firebase's web configuration identifies the client app; security is enforced by
@@ -19,3 +19,6 @@ const firebaseConfig = {
 export const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
 export const firebaseAuth = getAuth(firebaseApp)
 export const firebaseDatabase = getDatabase(firebaseApp)
+export const googleProvider = new GoogleAuthProvider()
+googleProvider.setCustomParameters({ prompt: 'select_account' })
+export const SHOP_ID = 'floor-232bc'

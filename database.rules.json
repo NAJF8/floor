@@ -1,0 +1,37 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "shopMemberships": {
+      "$uid": {
+        "$shopId": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": false,
+          ".validate": "newData.hasChildren(['role', 'active']) && newData.child('role').isString() && newData.child('active').isBoolean() && (newData.child('role').val() == 'SUPER_ADMIN' || newData.child('role').val() == 'MANAGER' || newData.child('role').val() == 'EMPLOYEE' || newData.child('role').val() == 'VIEWER')"
+        }
+      }
+    },
+    "shops": {
+      "$shopId": {
+        "products": {
+          ".read": true,
+          ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN'"
+        },
+        "public": {
+          ".read": true,
+          ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN'"
+        },
+        "private": {
+          ".read": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true",
+          ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN'"
+        }
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || (auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && root.child('shopMemberships').child(auth.uid).child('floor-232bc').child('role').val() == 'SUPER_ADMIN'))",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    }
+  }
+}
