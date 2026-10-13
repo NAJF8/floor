@@ -98,9 +98,11 @@ Production Firebase data, and it does not push or deploy either repository.
   tracking URL; opening WhatsApp is explicitly not treated as proof of sending
   or payment.
 - Admin Dashboard now derives period-scoped confirmed sales, payment/order
-  statuses, discounts, recent orders, and low-stock alerts from its authorized
-  Firebase reads. It is still local-only and has no live authenticated browser
-  acceptance yet.
+  statuses, discounts, recent orders, low-stock alerts, payment summaries, and
+  top products from its authorized Firebase reads. It supports today,
+  yesterday, week, month, previous month, all-time, and custom date windows,
+  plus a seven-day sales chart. It is still local-only and has no live
+  authenticated browser acceptance yet.
 - Both web clients now support an explicit local-only
   `VITE_USE_FIREBASE_EMULATORS=true` switch for Auth/RTDB/Functions testing;
   the default build keeps the existing Firebase project configuration.
