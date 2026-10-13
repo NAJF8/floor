@@ -84,22 +84,30 @@ export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: fals
   const actor = await requireStaff(request, policy.permission, policy.minimumRole)
   const target = database.ref(path)
   rejectSensitiveFields(request.data?.value)
+  const now = Date.now()
+  const audit = (key, extra = {}) => ({ action: 'ADMIN_WRITE', operation, path, recordKey: key || '', actorUid: actor.uid, createdAt: now, ...extra })
   if (operation === 'create') {
     const record = target.push()
-    await record.set({ ...(request.data?.value || {}), createdAt: Date.now(), updatedAt: Date.now() })
+    const updates = {}
+    updates[`${path}/${record.key}`] = { ...(request.data?.value || {}), createdAt: now, updatedAt: now }
+    updates[activityPath()] = audit(record.key)
+    await database.ref().update(updates)
     return { key: record.key, actorUid: actor.uid }
   }
   if (operation === 'update') {
     if (!request.data?.value || typeof request.data.value !== 'object' || Array.isArray(request.data.value)) throw new HttpsError('invalid-argument', 'Update data must be an object.')
-    await target.update({ ...request.data.value, updatedAt: Date.now() })
+    const updates = { [path]: { ...request.data.value, updatedAt: now }, [activityPath()]: audit(target.key) }
+    await database.ref().update(updates)
     return { actorUid: actor.uid }
   }
   if (operation === 'delete') {
-    await target.remove()
+    const updates = { [path]: null, [activityPath()]: audit(target.key) }
+    await database.ref().update(updates)
     return { actorUid: actor.uid }
   }
   if (operation === 'replace') {
-    await target.set(request.data?.value ?? null)
+    const updates = { [path]: request.data?.value ?? null, [activityPath()]: audit(target.key) }
+    await database.ref().update(updates)
     return { actorUid: actor.uid }
   }
   throw new HttpsError('invalid-argument', 'Unsupported administrative operation.')

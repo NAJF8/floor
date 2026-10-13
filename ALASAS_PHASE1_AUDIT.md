@@ -81,6 +81,11 @@ Production Firebase data, and it does not push or deploy either repository.
 - Private Admin reads now use `adminRead` callable polling and local Rules set the
   `private` parent to non-readable from the browser. Staff linking requires an
   existing Firebase Auth UID and protects immutable bootstrap memberships.
+- All allowlisted `adminWrite` operations now append a non-sensitive
+  `ADMIN_WRITE` activity record in the same multi-location update as the
+  catalog/settings mutation. Emulator readback confirmed a Manager-created
+  product and its matching audit entry; Viewer writes and sensitive CVV input
+  were rejected.
 - Latest synthetic approval readback: order total `40,000`, payment
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
@@ -125,6 +130,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor and province-aware customer display; no Production mutation or live browser acceptance |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
+| Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
 | Staff UID membership linking | PASS (emulator only) | Auth UID lookup, membership/staff readback, non-Super Admin Super Admin assignment rejected |
 | Default catalog seed | BLOCKED | Preview-only script exists; approved Admin credential is not configured |
