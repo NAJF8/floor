@@ -4,9 +4,11 @@ import { firebaseDatabase } from './firebase'
 export type FlowerProductRecord = {
   id: string
   name: string
+  nameEn?: string
   price: number
   category: string
   image?: string
+  imageUrls?: string[]
   description?: string
   active?: boolean
   stock?: number
@@ -42,9 +44,11 @@ export function subscribeToShopProducts(
       products.push({
         id,
         name: record.name,
+        ...(typeof record.nameEn === 'string' ? { nameEn: record.nameEn } : {}),
         price: Number(record.price),
         category: record.category,
         ...(typeof record.image === 'string' ? { image: record.image } : {}),
+        ...(Array.isArray(record.imageUrls) ? { imageUrls: record.imageUrls.filter((item): item is string => typeof item === 'string') } : {}),
         ...(typeof record.description === 'string' ? { description: record.description } : {}),
         ...(typeof record.stock === 'number' ? { stock: record.stock } : {}),
         active: true,
