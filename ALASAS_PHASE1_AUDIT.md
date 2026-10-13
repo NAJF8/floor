@@ -83,6 +83,9 @@ Production Firebase data, and it does not push or deploy either repository.
 - Customer Home now subscribes to visible public categories and uses them for
   its category cards, while retaining the existing visual fallback when no
   published categories exist.
+- Customer favorites now persist locally for anonymous visitors and render in
+  the Favorites page; Google-account synchronization remains intentionally
+  unimplemented until a safe user-scoped backend path is added.
 - Admin Dashboard now derives period-scoped confirmed sales, payment/order
   statuses, discounts, recent orders, and low-stock alerts from its authorized
   Firebase reads. It is still local-only and has no live authenticated browser
@@ -152,6 +155,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Coupon pricing and usage | PASS (unit + emulator) | 7 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
+| Favorites | BUILD PASS; local visitor behavior NOT VERIFIED | LocalStorage persistence and Favorites rendering are wired; account sync is not implemented |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
