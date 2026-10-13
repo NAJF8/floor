@@ -6,7 +6,7 @@ import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Hea
 import { signInWithPopup } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import './styles.css'
-import { subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerProductRecord, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
+import { subscribeToShopCategories, subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerCategoryRecord, type FlowerProductRecord, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
 import { firebaseAuth, firebaseFunctions, googleProvider } from './firebase'
 
 const image = (id: string, width = 900, height = 1100) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&h=${height}&q=88`
@@ -23,12 +23,12 @@ const products: Product[] = [
   { id: 'sunflower', name: 'باقة دوار الشمس', en: 'Sunflower Energy', price: 30000, category: 'هدايا المناسبات', image: image('photo-1508610048659-a06b669e3321'), tone: '#e3b544', description: 'ألوان مشرقة تفتح يوم من تحب.' },
   { id: 'luxury', name: 'باقة الورد الفاخر', en: 'Luxury Signature', price: 78000, category: 'باقات الورد', image: image('photo-1527061011665-3652c757a4d4'), badge: 'Signature', tone: '#b7ff2a', description: 'تجربة فاخرة بتنسيق كبير وتفاصيل تليق بالمناسبة.' },
 ]
-const categories = [
+const categories: [string, string, string][] = [
   ['باقات الورد', 'كل ما يليق بالمناسبة', 'photo-1523438885200-e635ba2c371e'], ['بوكسات الهدايا', 'ورد، شوكولاتة وأكثر', 'photo-1606800052052-a08af7148866'], ['هدايا التخرج', 'للحظة تستحق الاحتفال', 'photo-1526047932273-341f2a7631f9'], ['صمّم باقتك', 'خليها على ذوقك', 'photo-1548094971-2e4a2a1f13a4']
 ]
 const money = (n: number) => `${n.toLocaleString('en-US')} د.ع`
 
-type CatalogState = { products: Product[]; live: boolean; loading: boolean; error: string; publicConfig: ShopPublicConfig }
+type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; publicConfig: ShopPublicConfig }
 const CatalogContext = createContext<CatalogState | null>(null)
 const fallbackProductImage = `${import.meta.env.BASE_URL}alasas-logo.jpg`
 function mapCatalogProduct(record: FlowerProductRecord): Product {
@@ -47,13 +47,16 @@ function mapCatalogProduct(record: FlowerProductRecord): Product {
 }
 function CatalogProvider({ children }: { children: React.ReactNode }) {
   const [records, setRecords] = useState<FlowerProductRecord[]>([])
+  const [categoryRecords, setCategoryRecords] = useState<FlowerCategoryRecord[]>([])
   const [publicConfig, setPublicConfig] = useState<ShopPublicConfig>({ paymentMethods: {}, delivery: {}, settings: {} })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   useEffect(() => subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false) }, reason => { setError(reason.message); setLoading(false) }), [])
+  useEffect(() => subscribeToShopCategories('floor-232bc', setCategoryRecords, reason => setError(reason.message)), [])
   useEffect(() => subscribeToShopPublicConfig('floor-232bc', setPublicConfig, reason => setError(reason.message)), [])
   const liveProducts = records.map(mapCatalogProduct)
-  return <CatalogContext.Provider value={{ products: liveProducts.length ? liveProducts : products, live: liveProducts.length > 0, loading, error, publicConfig }}>{children}</CatalogContext.Provider>
+  const liveCategories: [string, string, string][] = categoryRecords.map(record => [record.name, record.description || 'اكتشف تشكيلات الأساس', record.image || 'photo-1523438885200-e635ba2c371e'])
+  return <CatalogContext.Provider value={{ products: liveProducts.length ? liveProducts : products, categories: liveCategories.length ? liveCategories : categories, live: liveProducts.length > 0, loading, error, publicConfig }}>{children}</CatalogContext.Provider>
 }
 function useCatalog() { const value = useContext(CatalogContext); if (!value) throw new Error('useCatalog must be used inside CatalogProvider'); return value }
 
@@ -123,10 +126,10 @@ function Header({ menu, setMenu, cartCount }: { menu: boolean; setMenu: (v: bool
 }
 
 function Home({ onAdd }: { onAdd: (productId: string) => void }) {
-  const { products: catalogProducts } = useCatalog()
+  const { products: catalogProducts, categories: catalogCategories } = useCatalog()
   return <main>
     <section className="hero section"><div className="container hero-grid"><div className="hero-copy"><div className="eyebrow"><span className="lime-dot" /> متجر زهور وهدايا بتفاصيلك</div><h1>الهدية الأجمل<br /><i>تبدأ بتفاصيلك.</i></h1><p>اختَر باقتك، نسّق ألوانها، وأضف لمستك الخاصة لتصل هديتك كما تخيلتها.</p><div className="hero-actions"><Link to="/shop" className="btn btn-dark">تسوّق الباقات <ArrowLeft size={18} /></Link><Link to="/design-your-bouquet" className="btn btn-light">صمّم باقتك <Palette size={18} /></Link></div><div className="hero-note"><Check size={15} /> تغليف أنيق &nbsp; <Check size={15} /> بطاقة مجانية &nbsp; <Check size={15} /> توصيل منسّق</div></div><div className="hero-visual"><div className="hero-image-wrap"><img src={image('photo-1527061011665-3652c757a4d4', 1000, 1200)} alt="باقة زهور فاخرة" /><div className="hero-float"><span>01</span><div><b>مختارة بعناية</b><small>كل باقة تحكي قصة</small></div></div></div><div className="hero-stamp"><span>AL ASAS</span><b>EST.<br />2024</b></div></div></div></section>
-    <section className="section compact-top"><div className="container"><SectionHeading title="اختَر ما يعبّر عنك" action="استكشف الكل" href="/shop" /><div className="category-grid">{categories.map(([title, sub, img], i) => <Link className={`category-card cat-${i}`} to={i === 3 ? '/design-your-bouquet' : `/shop?category=${title}`} key={title}><img src={image(img, 700, 720)} alt="" /><div className="category-overlay"><span>0{i + 1}</span><h3>{title}</h3><p>{sub}</p></div></Link>)}</div></div></section>
+    <section className="section compact-top"><div className="container"><SectionHeading title="اختَر ما يعبّر عنك" action="استكشف الكل" href="/shop" /><div className="category-grid">{catalogCategories.slice(0, 8).map(([title, sub, img], i) => <Link className={`category-card cat-${i}`} to={title === 'صمّم باقتك' ? '/design-your-bouquet' : `/shop?category=${title}`} key={title}><img src={img.startsWith('http') ? img : image(img, 700, 720)} alt="" /><div className="category-overlay"><span>{String(i + 1).padStart(2, '0')}</span><h3>{title}</h3><p>{sub}</p></div></Link>)}</div></div></section>
     <section className="section soft-section"><div className="container"><SectionHeading eyebrow="مختاراتنا" title="الأكثر طلباً هذا الأسبوع" action="عرض المنتجات" href="/shop" /><div className="product-grid">{catalogProducts.slice(0, 4).map(p => <ProductCard product={p} onAdd={onAdd} key={p.id} />)}</div></div></section>
     <section className="editorial section"><div className="container editorial-grid"><div className="editorial-image"><img src={image('photo-1523438885200-e635ba2c371e', 1000, 1100)} alt="صمّم باقتك" /><span className="image-label">YOUR STORY<br /><b>YOUR BLOOM</b></span></div><div className="editorial-copy"><div className="eyebrow">مساحتك الإبداعية</div><h2>تخيّلها، صمّمها،<br /><i>وخلّينا نجهزها إلك.</i></h2><p>من أول وردة إلى آخر لمسة تغليف، صمّم باقة تشبه الشخص والمناسبة. خيارات واضحة وسعر يتحدث معك مباشرة.</p><div className="mini-stats"><div><b>05</b><span>أنواع ورد</span></div><div><b>06</b><span>ألوان تغليف</span></div><div><b>∞</b><span>تركيبات ممكنة</span></div></div><Link to="/design-your-bouquet" className="text-link">ابدأ التصميم <ArrowLeft size={17} /></Link></div></div></section>
     <section className="ai-banner section"><div className="container ai-grid"><div><div className="eyebrow lime-eyebrow"><Sparkles size={15} /> ميزة الأساس</div><h2>احچي ويانه عن باقتك...<br /><i>وخلي الباقي علينا.</i></h2><p>وصف بسيط منك، وتصوّر أولي للباقة اللي ببالك. مساعد تجريبي يفهم اللهجة العراقية ويوصلك لتصميم واضح.</p><Link to="/ai-bouquet-designer" className="btn btn-lime">ابدأ تصميم باقتك <ArrowLeft size={18} /></Link></div><div className="chat-preview"><div className="chat-top"><span className="assistant-avatar"><Sparkles size={17} /></span><div><b>مساعد تنسيق الباقات</b><small><span /> متاح الآن</small></div><MoreDots /></div><div className="bubble assistant">هلا بيك! شنو المناسبة اللي نرتب إلها اليوم؟</div><div className="bubble user">أريد باقة تخرج ناعمة بحدود ٣٠ ألف</div><div className="suggestions"><span>تغليف أسود</span><span>ورد وردي</span><span>أضيف بطاقة</span></div></div></div></section>

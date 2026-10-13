@@ -18,6 +18,8 @@ export type FlowerProductRecord = {
   stock?: number
 }
 
+export type FlowerCategoryRecord = { id: string; name: string; description?: string; image?: string; order?: number; visible?: boolean; status?: string }
+
 export type PaymentMethodRecord = {
   id: string
   name: string
@@ -87,6 +89,26 @@ export function subscribeToShopProducts(
       })
     }
     onProducts(products)
+  }, error => onError(error))
+}
+
+export function subscribeToShopCategories(
+  shopId: string,
+  onCategories: (categories: FlowerCategoryRecord[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onValue(ref(firebaseDatabase, `shops/${shopId}/public/categories`), snapshot => {
+    const value: unknown = snapshot.val()
+    if (!value || typeof value !== 'object' || Array.isArray(value)) { onCategories([]); return }
+    const categories: FlowerCategoryRecord[] = []
+    for (const [id, item] of Object.entries(value)) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+      const record = item as Record<string, unknown>
+      if (typeof record.name !== 'string' || record.visible === false || ['HIDDEN', 'DRAFT', 'ARCHIVED'].includes(String(record.status || '').toUpperCase())) continue
+      categories.push({ id, name: record.name, ...(typeof record.description === 'string' ? { description: record.description } : {}), ...(typeof record.image === 'string' ? { image: record.image } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}), visible: true })
+    }
+    categories.sort((a, b) => (a.order || 0) - (b.order || 0))
+    onCategories(categories)
   }, error => onError(error))
 }
 

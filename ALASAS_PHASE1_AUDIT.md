@@ -74,6 +74,9 @@ Production Firebase data, and it does not push or deploy either repository.
   bank transfer, and ZainCash, including publish state, ordering, supported
   provinces, and allowed receiving details. Secret card fields remain rejected
   by the callable write policy.
+- Customer Home now subscribes to visible public categories and uses them for
+  its category cards, while retaining the existing visual fallback when no
+  published categories exist.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
@@ -124,6 +127,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor and status filtering are local-only; no Production write performed |
+| Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
 | Coupon pricing and usage | PASS (emulator only) | Server pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
