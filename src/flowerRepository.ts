@@ -25,6 +25,11 @@ export type PaymentMethodRecord = {
   enabled: boolean
   recipient?: string
   instructions?: string
+  bankName?: string
+  accountName?: string
+  accountNumber?: string
+  iban?: string
+  walletNumber?: string
   provinces?: string[]
   order?: number
 }
@@ -98,7 +103,7 @@ export function subscribeToShopPublicConfig(
       for (const [id, item] of Object.entries(rawPaymentMethods)) {
         const record = item as Record<string, unknown>
         if (typeof record.name === 'string' && typeof record.type === 'string' && record.enabled === true) {
-          paymentMethods[id] = { id, name: record.name, type: record.type, enabled: true, ...(typeof record.recipient === 'string' ? { recipient: record.recipient } : {}), ...(typeof record.instructions === 'string' ? { instructions: record.instructions } : {}), ...(Array.isArray(record.provinces) ? { provinces: record.provinces.filter((item): item is string => typeof item === 'string') } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}) }
+          paymentMethods[id] = { id, name: record.name, type: record.type, enabled: true, ...(typeof record.recipient === 'string' ? { recipient: record.recipient } : {}), ...(typeof record.instructions === 'string' ? { instructions: record.instructions } : {}), ...(typeof record.bankName === 'string' ? { bankName: record.bankName } : {}), ...(typeof record.accountName === 'string' ? { accountName: record.accountName } : {}), ...(typeof record.accountNumber === 'string' ? { accountNumber: record.accountNumber } : {}), ...(typeof record.iban === 'string' ? { iban: record.iban } : {}), ...(typeof record.walletNumber === 'string' ? { walletNumber: record.walletNumber } : {}), ...(Array.isArray(record.provinces) ? { provinces: record.provinces.filter((item): item is string => typeof item === 'string') } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}) }
         }
       }
     }
