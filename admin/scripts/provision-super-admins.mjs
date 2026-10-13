@@ -16,7 +16,9 @@ function initAdmin() {
   if (getApps().length) return getApps()[0]
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
   const credential = raw ? cert(JSON.parse(raw)) : undefined
-  return initializeApp({ projectId: PROJECT_ID, credential, databaseURL: 'https://floor-232bc-default-rtdb.europe-west1.firebasedatabase.app' })
+  const options = { projectId: PROJECT_ID, databaseURL: 'https://floor-232bc-default-rtdb.europe-west1.firebasedatabase.app' }
+  if (credential) options.credential = credential
+  return initializeApp(options)
 }
 
 const app = initAdmin(); const auth = getAuth(app); const db = getDatabase(app)
