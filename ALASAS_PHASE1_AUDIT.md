@@ -57,26 +57,37 @@ Production Firebase data, and it does not push or deploy either repository.
 - The customer UI now uses a product-id/quantity cart, reads the live catalog,
   requires Google sign-in before calling `createOrder`, and displays the
   server-returned order ID and total. Preview products are visibly blocked from
-  checkout. Payment approval, inventory reservation, and delivery configuration
-  migration remain incomplete.
+  checkout. Checkout now reads enabled payment methods, delivery areas, and the
+  shop WhatsApp setting from the public Firebase config and prepares a truthful
+  WhatsApp message after order creation.
+- The admin checkout adds a callable-backed order workflow: payment confirmation,
+  approval, status changes, and an inventory lock with one multi-location update.
+  Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
+  that checks membership role/permission and rejects sensitive payment fields.
+- Private Admin reads now use `adminRead` callable polling and local Rules set the
+  `private` parent to non-readable from the browser. Staff linking requires an
+  existing Firebase Auth UID and protects immutable bootstrap memberships.
+- Latest synthetic approval readback: order total `40,000`, payment
+  `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
+  rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
+  `reused: true` without another decrement.
 
 ## Blocking gaps before a Production release
 
 1. Customer checkout cannot currently create orders under the local rules,
    because the callable is only locally emulated and is not deployed. Production
    also has no published catalog/delivery/payment configuration to accept a real
-   order, while broad private reads would expose too much data to any active
-   member.
-2. Payment confirmation and stock reservation need a trusted atomic backend or
-   carefully tested transaction/rules design; a browser button is not financial
-   proof.
+   order, and deployed Rules parity has not been proven.
+2. The payment and inventory callables are emulator-verified only and still need
+   Production deployment plus authenticated Admin browser acceptance. A browser
+   button or transfer reference is not financial proof.
 3. GitHub image upload has no approved server-side GitHub App/service in the
    checked repositories. No token was added to frontend code.
 4. Product/category seed data requires a preview and explicit approval before
-   any Production write. No seed was executed.
-5. Authenticated CRUD, non-Super-Admin denial, customer checkout, payment
-   readback, inventory idempotency, and physical/live deployment acceptance
-   remain unverified.
+   any Production write. The idempotent preview script is present, but this
+   machine has no approved Admin credential, so the live preview was not run.
+5. Product/category seed data, customer checkout, payment readback, and
+   physical/live deployment acceptance remain unverified.
 
 ## Status summary
 
@@ -90,7 +101,11 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | NOT VERIFIED | No Production write performed |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
-| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs and callable client are wired; no deployed callable or authenticated browser acceptance |
-| Payment approval/inventory | BLOCKED | Approval and idempotent stock reservation are not implemented |
+| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
+| Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
+| Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
+| Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
+| Staff UID membership linking | PASS (emulator only) | Auth UID lookup, membership/staff readback, non-Super Admin Super Admin assignment rejected |
+| Default catalog seed | BLOCKED | Preview-only script exists; approved Admin credential is not configured |
 | GitHub image upload | BLOCKED | Server-side credential/service not present |
 

@@ -1,7 +1,10 @@
 import { getApps, initializeApp } from 'firebase-admin/app'
+import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { calculateOrder, normalizeOrderInput, SHOP_ID } from './src/order.js'
+
+const emulatorMode = Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_DATABASE_EMULATOR_HOST || process.env.FUNCTIONS_EMULATOR)
 
 if (!getApps().length) {
   const emulatorHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST
@@ -16,6 +19,229 @@ function authUid(request) {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Google sign-in is required before submitting an order.')
   return request.auth.uid
 }
+
+const roleOrder = { VIEWER: 0, EMPLOYEE: 1, MANAGER: 2, ADMIN: 3, SUPER_ADMIN: 4 }
+
+async function requireStaff(request, permission, minimumRole = 'EMPLOYEE') {
+  const uid = authUid(request)
+  const token = request.auth?.token || {}
+  if (!emulatorMode && token.firebase?.sign_in_provider && token.firebase.sign_in_provider !== 'google.com') {
+    throw new HttpsError('permission-denied', 'Google sign-in is required for administration.')
+  }
+  if (!emulatorMode && token.email_verified === false) throw new HttpsError('permission-denied', 'A verified administrator account is required.')
+  const membership = (await database.ref(`shopMemberships/${uid}/${SHOP_ID}`).get()).val()
+  const role = membership?.role
+  if (membership?.active !== true || !role || (roleOrder[role] || -1) < (roleOrder[minimumRole] || 0)) {
+    throw new HttpsError('permission-denied', 'This account is not authorized for this operation.')
+  }
+  if (role !== 'SUPER_ADMIN' && membership.permissions && membership.permissions[permission] === false) {
+    throw new HttpsError('permission-denied', `Missing permission: ${permission}`)
+  }
+  return { uid, role, membership }
+}
+
+function orderPath(orderId) { return `shops/${SHOP_ID}/private/orders/${orderId}` }
+function activityPath() { return `shops/${SHOP_ID}/private/activityLogs/${database.ref().push().key}` }
+function idText(value, field) {
+  if (typeof value !== 'string' || value.trim().length === 0 || value.length > 120) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+  return value.trim()
+}
+
+function adminWritePolicy(path) {
+  const prefix = `shops/${SHOP_ID}/`
+  if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..') || path.includes('//')) throw new HttpsError('invalid-argument', 'Invalid administrative path.')
+  const suffix = path.slice(prefix.length)
+  if (suffix === 'products' || suffix.startsWith('products/')) return { permission: 'products', minimumRole: 'MANAGER' }
+  if (suffix.startsWith('public/categories') || suffix.startsWith('public/discounts') || suffix.startsWith('public/delivery') || suffix.startsWith('public/paymentMethods') || suffix.startsWith('public/homepage') || suffix.startsWith('public/aiAssistant')) return { permission: 'catalog', minimumRole: 'MANAGER' }
+  if (suffix.startsWith('public/settings')) return { permission: 'settings', minimumRole: 'ADMIN' }
+  if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'MANAGER' }
+  if (suffix === 'private/staff' || suffix.startsWith('private/staff/')) throw new HttpsError('permission-denied', 'Use setStaffMembership to link a verified Firebase UID.')
+  throw new HttpsError('permission-denied', 'This path is not writable from the admin client.')
+}
+
+function adminReadPolicy(path) {
+  const prefix = `shops/${SHOP_ID}/`
+  if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..') || path.includes('//')) throw new HttpsError('invalid-argument', 'Invalid administrative path.')
+  const suffix = path.slice(prefix.length)
+  if (suffix === 'private/orders' || suffix.startsWith('private/orders/')) return { permission: 'orders', minimumRole: 'EMPLOYEE' }
+  if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'EMPLOYEE' }
+  if (suffix === 'private/customers' || suffix.startsWith('private/customers/')) return { permission: 'customers', minimumRole: 'MANAGER' }
+  if (suffix === 'private/activityLogs' || suffix.startsWith('private/activityLogs/')) return { permission: 'audit', minimumRole: 'MANAGER' }
+  if (suffix === 'private/staff' || suffix.startsWith('private/staff/')) return { permission: 'staff', minimumRole: 'ADMIN' }
+  if (suffix === 'private/payments' || suffix.startsWith('private/payments/')) return { permission: 'orders', minimumRole: 'MANAGER' }
+  throw new HttpsError('permission-denied', 'This private path is not readable from the admin client.')
+}
+
+function rejectSensitiveFields(value) {
+  const serialized = JSON.stringify(value || {}).toLowerCase()
+  if (/(pin|cvv|cvc|expiry|expiration|cardnumber|serviceaccount|github.?token|private.?key)/.test(serialized)) throw new HttpsError('invalid-argument', 'Sensitive payment or secret fields are not accepted.')
+}
+
+export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const operation = idText(request.data?.operation, 'operation')
+  const path = idText(request.data?.path, 'path')
+  const policy = adminWritePolicy(path)
+  const actor = await requireStaff(request, policy.permission, policy.minimumRole)
+  const target = database.ref(path)
+  rejectSensitiveFields(request.data?.value)
+  if (operation === 'create') {
+    const record = target.push()
+    await record.set({ ...(request.data?.value || {}), createdAt: Date.now(), updatedAt: Date.now() })
+    return { key: record.key, actorUid: actor.uid }
+  }
+  if (operation === 'update') {
+    if (!request.data?.value || typeof request.data.value !== 'object' || Array.isArray(request.data.value)) throw new HttpsError('invalid-argument', 'Update data must be an object.')
+    await target.update({ ...request.data.value, updatedAt: Date.now() })
+    return { actorUid: actor.uid }
+  }
+  if (operation === 'delete') {
+    await target.remove()
+    return { actorUid: actor.uid }
+  }
+  if (operation === 'replace') {
+    await target.set(request.data?.value ?? null)
+    return { actorUid: actor.uid }
+  }
+  throw new HttpsError('invalid-argument', 'Unsupported administrative operation.')
+})
+
+export const adminRead = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const path = idText(request.data?.path, 'path')
+  const policy = adminReadPolicy(path)
+  await requireStaff(request, policy.permission, policy.minimumRole)
+  const snapshot = await database.ref(path).get()
+  return { path, data: snapshot.exists() ? snapshot.val() : null }
+})
+
+export const setStaffMembership = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const actor = await requireStaff(request, 'staff', 'ADMIN')
+  const uid = idText(request.data?.uid, 'uid')
+  const role = idText(request.data?.role, 'role')
+  const allowedRoles = new Set(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'])
+  if (!allowedRoles.has(role)) throw new HttpsError('invalid-argument', 'Unsupported staff role.')
+  if (role === 'SUPER_ADMIN' && actor.role !== 'SUPER_ADMIN') throw new HttpsError('permission-denied', 'Only a Super Admin can assign Super Admin.')
+  let authUser
+  try { authUser = await getAuth().getUser(uid) } catch { throw new HttpsError('not-found', 'Firebase Auth UID was not found.') }
+  if (request.data?.email && request.data.email !== authUser.email) throw new HttpsError('failed-precondition', 'The supplied email does not match the Firebase UID.')
+  const membershipRef = database.ref(`shopMemberships/${uid}/${SHOP_ID}`)
+  const current = (await membershipRef.get()).val()
+  if (current?.immutableBootstrap && (current.role !== role || current.active !== request.data?.active)) throw new HttpsError('permission-denied', 'Bootstrap Super Admin membership is immutable.')
+  const active = request.data?.active !== false
+  const now = Date.now()
+  const record = { uid, email: authUser.email || '', displayName: typeof request.data?.displayName === 'string' ? request.data.displayName.trim().slice(0, 120) : authUser.displayName || '', role, active, updatedAt: now, ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: now }) }
+  const updates = {}
+  updates[`shopMemberships/${uid}/${SHOP_ID}`] = { ...record, permissions: current?.permissions || {}, ...(current?.immutableBootstrap ? { immutableBootstrap: true } : {}) }
+  updates[`shops/${SHOP_ID}/private/staff/${uid}`] = record
+  updates[activityPath()] = { action: 'STAFF_MEMBERSHIP_UPDATED', actorUid: actor.uid, targetUid: uid, role, active, createdAt: now }
+  await database.ref().update(updates)
+  return { uid, email: authUser.email || '', role, active }
+})
+
+export const confirmOrderPayment = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const actor = await requireStaff(request, 'orders', 'MANAGER')
+  const orderId = idText(request.data?.orderId, 'orderId')
+  const orderRef = database.ref(orderPath(orderId))
+  const before = (await orderRef.get()).val()
+  if (!before) throw new HttpsError('not-found', 'Order not found.')
+  if (before.orderStatus === 'CANCELLED' || before.orderStatus === 'REJECTED') throw new HttpsError('failed-precondition', 'A cancelled or rejected order cannot be paid.')
+  if (before.paymentStatus === 'CONFIRMED') return { orderId, reused: true, paymentStatus: 'CONFIRMED' }
+  const now = Date.now()
+  const result = await orderRef.transaction((current) => {
+    if (!current || current.paymentStatus === 'CONFIRMED') return current
+    return { ...current, paymentStatus: 'CONFIRMED', paidAmount: current.total, paymentConfirmedBy: actor.uid, paymentConfirmedAt: now, updatedAt: now }
+  })
+  const after = result.snapshot.val()
+  if (!after) throw new HttpsError('not-found', 'Order not found.')
+  if (after.paymentStatus !== 'CONFIRMED') throw new HttpsError('aborted', 'Payment confirmation was not committed.')
+  if (after.paymentConfirmedBy !== actor.uid || after.paymentConfirmedAt !== now) return { orderId, reused: true, paymentStatus: 'CONFIRMED' }
+  const updates = {}
+  updates[`shops/${SHOP_ID}/private/payments/${orderId}`] = { orderId, amount: after.paidAmount, method: after.paymentMethod, reference: after.transferReference || '', status: 'CONFIRMED', confirmedBy: actor.uid, confirmedAt: now }
+  updates[activityPath()] = { action: 'PAYMENT_CONFIRMED', actorUid: actor.uid, orderId, amount: after.paidAmount, paymentMethod: after.paymentMethod?.id || '', createdAt: now }
+  await database.ref().update(updates)
+  return { orderId, reused: false, paymentStatus: 'CONFIRMED' }
+})
+
+function prepareApproval(shopData, orderId, actorUid, now) {
+  const order = shopData?.private?.orders?.[orderId]
+  if (!order) return { error: 'ORDER_NOT_FOUND' }
+  if (order.orderStatus === 'CANCELLED' || order.orderStatus === 'REJECTED') return { error: 'ORDER_TERMINAL' }
+  const paymentType = order.paymentMethod?.type
+  if (paymentType !== 'CASH' && order.paymentStatus !== 'CONFIRMED') return { error: 'PAYMENT_NOT_CONFIRMED' }
+  const existing = shopData.private?.orderReservations?.[orderId]
+  if (existing?.status === 'RESERVED') return { reused: true, order }
+  const products = shopData.products || {}
+  const inventory = shopData.private?.inventory || {}
+  const consumed = {}
+  for (const item of Array.isArray(order.items) ? order.items : []) {
+    const product = products[item.productId]
+    if (!product) return { error: 'PRODUCT_UNAVAILABLE' }
+    if (Number.isInteger(product.stock)) {
+      if (product.stock < item.quantity) return { error: 'INSUFFICIENT_STOCK' }
+    }
+    for (const [materialId, units] of Object.entries(item.inventoryRecipe || {})) {
+      const material = inventory[materialId]
+      const required = units * item.quantity
+      if (!material || !Number.isInteger(material.quantity) || material.quantity < required) return { error: 'INSUFFICIENT_MATERIAL' }
+      consumed[materialId] = (consumed[materialId] || 0) + required
+    }
+  }
+  const updates = {}
+  for (const item of order.items || []) {
+    const product = products[item.productId]
+    if (Number.isInteger(product.stock)) updates[`shops/${SHOP_ID}/products/${item.productId}/stock`] = product.stock - item.quantity
+  }
+  for (const [materialId, required] of Object.entries(consumed)) updates[`shops/${SHOP_ID}/private/inventory/${materialId}/quantity`] = inventory[materialId].quantity - required
+  updates[`shops/${SHOP_ID}/private/orders/${orderId}`] = { ...order, orderStatus: 'APPROVED', inventoryStatus: 'RESERVED', inventoryReservationId: orderId, updatedAt: now }
+  updates[`shops/${SHOP_ID}/private/orderReservations/${orderId}`] = { status: 'RESERVED', orderId, actorUid, consumed, createdAt: now }
+  updates[activityPath()] = { action: 'ORDER_APPROVED_INVENTORY_RESERVED', actorUid, orderId, consumed, createdAt: now }
+  return { updates, order, reused: false }
+}
+
+export const approveOrder = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const actor = await requireStaff(request, 'orders', 'MANAGER')
+  const orderId = idText(request.data?.orderId, 'orderId')
+  const lockRef = database.ref(`shops/${SHOP_ID}/private/inventoryLock`)
+  const lockToken = `${actor.uid}:${Math.random().toString(36).slice(2)}`
+  const now = Date.now()
+  const lock = await lockRef.transaction((current) => current && current.expiresAt > now ? current : { token: lockToken, expiresAt: now + 30000 })
+  if (!lock.committed || lock.snapshot.val()?.token !== lockToken) throw new HttpsError('aborted', 'Inventory is busy; try again.')
+  try {
+    // Read the individual branches after taking the lock. Child reads avoid a
+    // stale parent snapshot in the Admin SDK/emulator and keep the transaction
+    // scope limited to the order, catalog stock, and material inventory.
+    const [orderSnapshot, productsSnapshot, inventorySnapshot, reservationSnapshot] = await Promise.all([
+      database.ref(orderPath(orderId)).get(),
+      database.ref(`shops/${SHOP_ID}/products`).get(),
+      database.ref(`shops/${SHOP_ID}/private/inventory`).get(),
+      database.ref(`shops/${SHOP_ID}/private/orderReservations/${orderId}`).get(),
+    ])
+    const shopData = { products: productsSnapshot.val() || {}, private: { orders: { [orderId]: orderSnapshot.val() }, inventory: inventorySnapshot.val() || {}, orderReservations: { [orderId]: reservationSnapshot.val() } } }
+    const prepared = prepareApproval(shopData, orderId, actor.uid, now)
+    if (prepared.error) {
+      const map = { ORDER_NOT_FOUND: 'not-found', ORDER_TERMINAL: 'failed-precondition', PAYMENT_NOT_CONFIRMED: 'failed-precondition', PRODUCT_UNAVAILABLE: 'failed-precondition', INSUFFICIENT_STOCK: 'failed-precondition', INSUFFICIENT_MATERIAL: 'failed-precondition' }
+      throw new HttpsError(map[prepared.error] || 'failed-precondition', prepared.error)
+    }
+    if (prepared.reused) return { orderId, reused: true, orderStatus: prepared.order.orderStatus, inventoryStatus: prepared.order.inventoryStatus }
+    await database.ref().update(prepared.updates)
+    return { orderId, reused: false, orderStatus: 'APPROVED', inventoryStatus: 'RESERVED' }
+  } finally {
+    await lockRef.transaction((current) => current?.token === lockToken ? null : current)
+  }
+})
+
+export const setOrderStatus = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const actor = await requireStaff(request, 'orders', 'EMPLOYEE')
+  const orderId = idText(request.data?.orderId, 'orderId')
+  const nextStatus = idText(request.data?.orderStatus, 'orderStatus')
+  const allowed = new Set(['NEW', 'AWAITING_PAYMENT', 'PAYMENT_REVIEW', 'PAYMENT_CONFIRMED', 'APPROVED', 'PREPARING', 'READY_FOR_DELIVERY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REJECTED', 'CANCELLED'])
+  if (!allowed.has(nextStatus) || ['PAYMENT_CONFIRMED', 'APPROVED'].includes(nextStatus)) throw new HttpsError('invalid-argument', 'Use the dedicated payment or approval action.')
+  const orderRef = database.ref(orderPath(orderId))
+  const result = await orderRef.transaction((current) => current ? { ...current, orderStatus: nextStatus, updatedAt: Date.now() } : undefined)
+  if (!result.committed) throw new HttpsError('not-found', 'Order not found.')
+  const now = Date.now()
+  await database.ref().update({ [activityPath()]: { action: 'ORDER_STATUS_CHANGED', actorUid: actor.uid, orderId, orderStatus: nextStatus, createdAt: now } })
+  return { orderId, orderStatus: result.snapshot.val()?.orderStatus, reused: result.snapshot.val()?.updatedAt !== now }
+})
 
 function toHttpsError(error) {
   const code = error instanceof Error ? error.message : 'INVALID_ORDER'

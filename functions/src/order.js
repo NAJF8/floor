@@ -48,6 +48,13 @@ function productIsPublished(product) {
   return product && typeof product === 'object' && !Array.isArray(product) && product.active !== false && product.status !== 'ARCHIVED' && product.status !== 'HIDDEN' && product.status !== 'DRAFT'
 }
 
+function normalizeRecipe(recipe) {
+  if (!recipe || typeof recipe !== 'object' || Array.isArray(recipe)) return {}
+  return Object.fromEntries(Object.entries(recipe)
+    .filter(([materialId, quantity]) => typeof materialId === 'string' && materialId.length > 0 && Number.isInteger(quantity) && quantity > 0)
+    .map(([materialId, quantity]) => [materialId, quantity]))
+}
+
 function findDeliveryArea(delivery, province, district) {
   const provinceRecord = delivery?.[province]
   const areas = provinceRecord?.areas || provinceRecord?.districts || provinceRecord
@@ -67,6 +74,7 @@ export function calculateOrder(input, products, delivery, paymentMethods) {
       quantity,
       unitPrice: product.price,
       image: typeof product.image === 'string' ? product.image : Array.isArray(product.imageUrls) && typeof product.imageUrls[0] === 'string' ? product.imageUrls[0] : '',
+      inventoryRecipe: normalizeRecipe(product.inventoryRecipe || product.recipe),
       lineTotal: product.price * quantity,
     }
   })

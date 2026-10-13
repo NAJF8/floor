@@ -14,6 +14,25 @@ export type FlowerProductRecord = {
   stock?: number
 }
 
+export type PaymentMethodRecord = {
+  id: string
+  name: string
+  type: string
+  enabled: boolean
+  recipient?: string
+  instructions?: string
+  provinces?: string[]
+  order?: number
+}
+
+export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?: string }
+export type DeliveryProvinceRecord = { areas?: Record<string, DeliveryAreaRecord>; districts?: Record<string, DeliveryAreaRecord> }
+export type ShopPublicConfig = {
+  paymentMethods: Record<string, PaymentMethodRecord>
+  delivery: Record<string, DeliveryProvinceRecord>
+  settings: Record<string, unknown>
+}
+
 /**
  * Watch one shop's products. Returns an unsubscribe function.
  * Requires explicit, least-privilege Firebase RTDB security rules.
@@ -55,5 +74,41 @@ export function subscribeToShopProducts(
       })
     }
     onProducts(products)
+  }, error => onError(error))
+}
+
+export function subscribeToShopPublicConfig(
+  shopId: string,
+  onConfig: (config: ShopPublicConfig) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onValue(ref(firebaseDatabase, `shops/${shopId}/public`), snapshot => {
+    const value = snapshot.val()
+    const paymentMethods: Record<string, PaymentMethodRecord> = {}
+    const rawPaymentMethods = value?.paymentMethods
+    if (rawPaymentMethods && typeof rawPaymentMethods === 'object' && !Array.isArray(rawPaymentMethods)) {
+      for (const [id, item] of Object.entries(rawPaymentMethods)) {
+        const record = item as Record<string, unknown>
+        if (typeof record.name === 'string' && typeof record.type === 'string' && record.enabled === true) {
+          paymentMethods[id] = { id, name: record.name, type: record.type, enabled: true, ...(typeof record.recipient === 'string' ? { recipient: record.recipient } : {}), ...(typeof record.instructions === 'string' ? { instructions: record.instructions } : {}), ...(Array.isArray(record.provinces) ? { provinces: record.provinces.filter((item): item is string => typeof item === 'string') } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}) }
+        }
+      }
+    }
+    const delivery: Record<string, DeliveryProvinceRecord> = {}
+    const rawDelivery = value?.delivery
+    if (rawDelivery && typeof rawDelivery === 'object' && !Array.isArray(rawDelivery)) {
+      for (const [province, item] of Object.entries(rawDelivery)) {
+        const record = item as Record<string, unknown>
+        const areas = (record.areas || record.districts) as Record<string, unknown> | undefined
+        if (!areas || typeof areas !== 'object' || Array.isArray(areas)) continue
+        const normalizedAreas: Record<string, DeliveryAreaRecord> = {}
+        for (const [district, area] of Object.entries(areas)) {
+          const areaRecord = area as Record<string, unknown>
+          if (Number.isInteger(areaRecord.price) && (areaRecord.price as number) >= 0 && areaRecord.enabled !== false) normalizedAreas[district] = { price: areaRecord.price as number, ...(typeof areaRecord.deliveryAt === 'string' ? { deliveryAt: areaRecord.deliveryAt } : {}) }
+        }
+        delivery[province] = { areas: normalizedAreas }
+      }
+    }
+    onConfig({ paymentMethods, delivery, settings: value?.settings && typeof value.settings === 'object' && !Array.isArray(value.settings) ? value.settings : {} })
   }, error => onError(error))
 }

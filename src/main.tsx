@@ -6,7 +6,7 @@ import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Hea
 import { signInWithPopup } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import './styles.css'
-import { subscribeToShopProducts, type FlowerProductRecord } from './flowerRepository'
+import { subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerProductRecord, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
 import { firebaseAuth, firebaseFunctions, googleProvider } from './firebase'
 
 const image = (id: string, width = 900, height = 1100) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&h=${height}&q=88`
@@ -28,7 +28,7 @@ const categories = [
 ]
 const money = (n: number) => `${n.toLocaleString('en-US')} د.ع`
 
-type CatalogState = { products: Product[]; live: boolean; loading: boolean; error: string }
+type CatalogState = { products: Product[]; live: boolean; loading: boolean; error: string; publicConfig: ShopPublicConfig }
 const CatalogContext = createContext<CatalogState | null>(null)
 const fallbackProductImage = `${import.meta.env.BASE_URL}alasas-logo.jpg`
 function mapCatalogProduct(record: FlowerProductRecord): Product {
@@ -45,11 +45,13 @@ function mapCatalogProduct(record: FlowerProductRecord): Product {
 }
 function CatalogProvider({ children }: { children: React.ReactNode }) {
   const [records, setRecords] = useState<FlowerProductRecord[]>([])
+  const [publicConfig, setPublicConfig] = useState<ShopPublicConfig>({ paymentMethods: {}, delivery: {}, settings: {} })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   useEffect(() => subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false) }, reason => { setError(reason.message); setLoading(false) }), [])
+  useEffect(() => subscribeToShopPublicConfig('floor-232bc', setPublicConfig, reason => setError(reason.message)), [])
   const liveProducts = records.map(mapCatalogProduct)
-  return <CatalogContext.Provider value={{ products: liveProducts.length ? liveProducts : products, live: liveProducts.length > 0, loading, error }}>{children}</CatalogContext.Provider>
+  return <CatalogContext.Provider value={{ products: liveProducts.length ? liveProducts : products, live: liveProducts.length > 0, loading, error, publicConfig }}>{children}</CatalogContext.Provider>
 }
 function useCatalog() { const value = useContext(CatalogContext); if (!value) throw new Error('useCatalog must be used inside CatalogProvider'); return value }
 
@@ -95,7 +97,7 @@ function App() {
       <Route path="/design-your-bouquet" element={<Designer onAdd={() => notify('التصميم التوضيحي لا يُضاف كمنتج حتى يتم اعتماده من المتجر')} />} />
       <Route path="/ai-bouquet-designer" element={<AIDesigner onAdd={() => notify('المعاينة التوضيحية لا تُضاف كمنتج حتى يتم اعتمادها من المتجر')} />} />
       <Route path="/cart" element={<Cart cart={cart} />} />
-      <Route path="/checkout" element={<Checkout cart={cart} />} />
+      <Route path="/checkout" element={<CheckoutConnected cart={cart} />} />
       <Route path="/track-order" element={<TrackOrder />} />
       <Route path="/favorites" element={<Favorites />} />
       <Route path="/account" element={<Account />} />
@@ -181,6 +183,58 @@ function Checkout({ cart }: { cart: CartState }) {
     } finally { setBusy(false) }
   }
   return <main className="page"><div className="container narrow"><div className="page-intro compact"><div><div className="eyebrow">إتمام الطلب</div><h1>باقي <i>كم تفصيلة.</i></h1></div></div>{created ? <div className="demo-card"><Check size={24} /><h3>تم تسجيل الطلب</h3><p>رقم الطلب: <b>{created.orderId}</b></p><p>الإجمالي المحسوب من الخادم: <b>{money(created.total)}</b></p><p>الحالة: {created.paymentStatus === 'UNPAID' ? 'الدفع عند الاستلام — غير مدفوع' : 'بانتظار مراجعة الدفع'}</p></div> : <div className="checkout-layout"><form className="checkout-form" onSubmit={submit}><div className="stepper"><span className="active">01 البيانات</span><span>02 التوصيل</span><span>03 المراجعة</span></div><label>الاسم الكامل<input required value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="مثال: زهراء محمد" /></label><label>رقم الهاتف<input required value={phone} onChange={e => setPhone(e.target.value)} placeholder="07xx xxx xxxx" /></label><label>اسم المستلم<input required value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="اسم مستلم الهدية" /></label><label>هاتف المستلم<input required value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} placeholder="07xx xxx xxxx" /></label><label>المحافظة<select value={province} onChange={e => setProvince(e.target.value)}><option>بغداد</option><option>أربيل</option><option>البصرة</option></select></label><label>المنطقة أو القضاء<input required value={district} onChange={e => setDistrict(e.target.value)} placeholder="مثال: الكرادة" /></label><label>العنوان التفصيلي<textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="الشارع، أقرب نقطة دالة" /></label><label>موعد التسليم المطلوب<input required value={deliveryAt} onChange={e => setDeliveryAt(e.target.value)} placeholder="مثال: 2026-10-20 مساءً" /></label><label>رسالة البطاقة<textarea value={giftMessage} onChange={e => setGiftMessage(e.target.value)} placeholder="اختياري" /></label>{feedback && <p className="demo-note">{feedback}</p>}<button className="btn btn-dark full" disabled={busy}>{busy ? 'جارٍ التحقق والتسجيل...' : 'تأكيد وإرسال الطلب'} <ArrowLeft size={18} /></button></form><aside className="demo-card"><BadgePercent size={24} /><h3>{live ? 'طلب متصل بالمتجر' : 'عرض تجريبي'}</h3><p>{live ? 'سيتم احتساب السعر والتوصيل من إعدادات المتجر على الخادم.' : 'لم تُنشر منتجات المتجر بعد؛ لن يتم إرسال طلب حقيقي من هذه المعاينة.'}</p><div className="demo-order"><span>الدفع</span><b>الدفع عند الاستلام</b></div></aside></div>}</div></main>
+}
+function CheckoutConnected({ cart }: { cart: CartState }) {
+  const { products: catalogProducts, live, publicConfig } = useCatalog()
+  const [customerName, setCustomerName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [recipientName, setRecipientName] = useState('')
+  const [recipientPhone, setRecipientPhone] = useState('')
+  const [province, setProvince] = useState('')
+  const [district, setDistrict] = useState('')
+  const [address, setAddress] = useState('')
+  const [deliveryAt, setDeliveryAt] = useState('')
+  const [giftMessage, setGiftMessage] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState('')
+  const [transferReference, setTransferReference] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [feedback, setFeedback] = useState('')
+  const [created, setCreated] = useState<{ orderId: string; total: number; paymentStatus?: string } | null>(null)
+  const availableItems = cart.items.filter(item => catalogProducts.some(product => product.id === item.productId))
+  const provinceNames = Object.keys(publicConfig.delivery)
+  const paymentMethods = Object.values(publicConfig.paymentMethods).sort((a, b) => (a.order || 0) - (b.order || 0))
+  const selectedProvince = publicConfig.delivery[province]
+  const areas = selectedProvince?.areas || selectedProvince?.districts || {}
+  const selectedArea = areas[district]
+  const selectedPayment = publicConfig.paymentMethods[paymentMethodId]
+  useEffect(() => { if (!province && provinceNames[0]) setProvince(provinceNames[0]) }, [province, provinceNames.join('|')])
+  useEffect(() => { if (!paymentMethodId && paymentMethods[0]) setPaymentMethodId(paymentMethods[0].id) }, [paymentMethodId, paymentMethods.map(method => method.id).join('|')])
+  useEffect(() => { if (district && !areas[district]) setDistrict('') }, [province, district, Object.keys(areas).join('|')])
+  const createWhatsAppUrl = (orderId: string, total: number, method: PaymentMethodRecord) => {
+    const whatsapp = typeof publicConfig.settings.whatsapp === 'string' ? publicConfig.settings.whatsapp.replace(/\D/g, '') : ''
+    if (!whatsapp) return ''
+    const productsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId} × ${item.quantity}` }).join('\n')
+    const message = [`طلب جديد — ${String(publicConfig.settings.storeName || 'AL ASAS')}`, `رقم الطلب: ${orderId}`, `اسم الزبون: ${customerName}`, `رقم الهاتف: ${phone}`, `المستلم: ${recipientName}`, `المنتجات:\n${productsText}`, `رسالة الإهداء: ${giftMessage || 'لا توجد'}`, `المحافظة: ${province}`, `المنطقة: ${district}`, `العنوان: ${address}`, `موعد التوصيل: ${deliveryAt}`, `الإجمالي: ${money(total)}`, `طريقة الدفع: ${method.name}`, `مرجع التحويل: ${transferReference || 'لا يوجد'}`, `حالة الدفع: ${selectedPayment?.type === 'CASH' ? 'غير مدفوع' : 'بانتظار المراجعة'}`].join('\n')
+    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
+  }
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); setFeedback('')
+    if (!live || !availableItems.length || availableItems.length !== cart.items.length) { setFeedback('الطلب غير جاهز: يجب أن تكون المنتجات منشورة في كتالوج المتجر.'); return }
+    if (!selectedArea || !selectedPayment) { setFeedback('اختر محافظة ومنطقة وطريقة دفع مفعّلة من إعدادات المتجر.'); return }
+    setBusy(true)
+    try {
+      if (!firebaseAuth.currentUser) await signInWithPopup(firebaseAuth, googleProvider)
+      const createOrder = httpsCallable(firebaseFunctions, 'createOrder')
+      const result = await createOrder({ items: availableItems, customerName, phone, recipientName, recipientPhone, province, district, address, deliveryAt, giftMessage, paymentMethodId, transferReference, idempotencyKey: crypto.randomUUID() })
+      const data = result.data as { orderId: string; total: number; paymentStatus?: string }
+      setCreated(data); cart.clear()
+    } catch (error) {
+      const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code).split('/').pop() : ''
+      setFeedback(code === 'unauthenticated' ? 'يلزم تسجيل الدخول لإرسال الطلب.' : code === 'delivery-area-unconfigured' ? 'هذه المنطقة غير مهيأة للتوصيل بعد.' : code === 'payment-method-unavailable' ? 'طريقة الدفع غير مفعّلة حالياً.' : 'تعذر إرسال الطلب بأمان. راجع البيانات وحاول مرة أخرى.')
+    } finally { setBusy(false) }
+  }
+  const whatsappUrl = created && selectedPayment ? createWhatsAppUrl(created.orderId, created.total, selectedPayment) : ''
+  return <main className="page"><div className="container narrow"><div className="page-intro compact"><div><div className="eyebrow">إتمام الطلب</div><h1>باقي <i>كم تفصيلة.</i></h1></div></div>{created ? <div className="demo-card"><Check size={24} /><h3>تم تسجيل الطلب</h3><p>رقم الطلب: <b>{created.orderId}</b></p><p>الإجمالي المحسوب من الخادم: <b>{money(created.total)}</b></p><p>الحالة: {created.paymentStatus === 'UNPAID' ? 'الدفع عند الاستلام — غير مدفوع' : 'بانتظار مراجعة الدفع'}</p>{whatsappUrl && <a className="btn btn-lime full" href={whatsappUrl} target="_blank" rel="noreferrer">تجهيز رسالة واتساب <Send size={17} /></a>}<p className="disclaimer">فتح واتساب لا يثبت إرسال الرسالة ولا موافقة الإدارة.</p></div> : <div className="checkout-layout"><form className="checkout-form" onSubmit={submit}><div className="stepper"><span className="active">01 البيانات</span><span>02 التوصيل</span><span>03 الدفع</span></div><label>الاسم الكامل<input required value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="مثال: زهراء محمد" /></label><label>رقم الهاتف<input required value={phone} onChange={e => setPhone(e.target.value)} placeholder="07xx xxx xxxx" /></label><label>اسم المستلم<input required value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="اسم مستلم الهدية" /></label><label>هاتف المستلم<input required value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} placeholder="07xx xxx xxxx" /></label><label>المحافظة<select required value={province} onChange={e => { setProvince(e.target.value); setDistrict('') }}><option value="">اختر المحافظة</option>{provinceNames.map(name => <option key={name}>{name}</option>)}</select></label><label>المنطقة أو القضاء<select required value={district} onChange={e => setDistrict(e.target.value)}><option value="">اختر المنطقة</option>{Object.entries(areas).map(([name, area]) => <option key={name} value={name}>{name} — {money(area.price)}</option>)}</select></label><label>العنوان التفصيلي<textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="الشارع، أقرب نقطة دالة" /></label><label>موعد التسليم المطلوب<input required value={deliveryAt} onChange={e => setDeliveryAt(e.target.value)} placeholder="مثال: 2026-10-20 مساءً" /></label><label>طريقة الدفع<select required value={paymentMethodId} onChange={e => setPaymentMethodId(e.target.value)}><option value="">اختر طريقة الدفع</option>{paymentMethods.map(method => <option value={method.id} key={method.id}>{method.name}</option>)}</select></label>{selectedPayment && <div className="demo-note">{selectedPayment.recipient && <span>بيانات الاستلام: {selectedPayment.recipient}<br /></span>}{selectedPayment.instructions}</div>}{selectedPayment && selectedPayment.type !== 'CASH' && <label>الرقم المرجعي للتحويل<input value={transferReference} onChange={e => setTransferReference(e.target.value)} placeholder="اختياري — لا يغني عن تحقق الإدارة" /></label>}<label>رسالة البطاقة<textarea value={giftMessage} onChange={e => setGiftMessage(e.target.value)} placeholder="اختياري" /></label>{feedback && <p className="demo-note">{feedback}</p>}<button className="btn btn-dark full" disabled={busy || !selectedArea || !selectedPayment}>{busy ? 'جارٍ التحقق والتسجيل...' : 'تأكيد وإرسال الطلب'} <ArrowLeft size={18} /></button></form><aside className="demo-card"><BadgePercent size={24} /><h3>{live && paymentMethods.length ? 'طلب متصل بالمتجر' : 'Checkout محجوب مؤقتاً'}</h3><p>{live && paymentMethods.length ? 'السعر والتوصيل وطريقة الدفع مأخوذة من إعدادات المتجر؛ السعر النهائي يحسبه الخادم.' : 'لا توجد حالياً إعدادات نشر مكتملة للمنتجات والتوصيل والدفع؛ لن يتم إرسال طلب.'}</p><div className="demo-order"><span>أجرة التوصيل</span><b>{selectedArea ? money(selectedArea.price) : 'تُحسب بعد الاختيار'}</b></div></aside></div>}</div></main>
 }
 function TrackOrder() { return <main className="page"><div className="container narrow"><div className="centered-heading"><div className="eyebrow">تتبّع طلبك</div><h1>كل خطوة، <i>واضحة.</i></h1><p>أدخل رقم الطلب التجريبي لمشاهدة آخر تحديث.</p></div><div className="track-search"><input placeholder="مثال: AL-2024-0182" defaultValue="AL-2024-0182" /><button className="btn btn-dark">تتبّع <ArrowLeft size={17} /></button></div><div className="tracking-card"><div className="tracking-head"><div><small>رقم الطلب</small><h3>AL-2024-0182</h3></div><span className="status-pill">قيد تجهيز الباقة</span></div><div className="timeline">{['تم استلام الطلب', 'تم تأكيد الطلب', 'قيد تجهيز الباقة', 'جاهز للتوصيل', 'تم التسليم'].map((x, i) => <div className={`timeline-item ${i <= 2 ? 'done' : ''}`} key={x}><span>{i <= 2 ? <Check size={13} /> : i + 1}</span><div><b>{x}</b>{i === 2 && <small>اليوم، جارٍ تجهيز طلبك بعناية</small>}</div></div>)}</div></div></div></main> }
 function Favorites() { return <main className="page"><div className="container"><div className="page-intro compact"><div><div className="eyebrow">مساحتك</div><h1>الأشياء التي <i>أحببتها.</i></h1></div></div><EmptyState title="لا توجد مفضلات بعد" text="اضغط على القلب بجانب أي باقة لترجع لها بسهولة." link="/shop" /></div></main> }
