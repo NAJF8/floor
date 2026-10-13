@@ -44,3 +44,13 @@ test('does not apply expired or below-minimum discounts', () => {
   assert.throws(() => calculateOrder({ ...input, couponCode: 'OLD' }, base, delivery, payment, discounts), /DISCOUNT_UNAVAILABLE/)
   assert.throws(() => calculateOrder({ ...input, couponCode: 'MIN' }, base, delivery, payment, discounts), /DISCOUNT_UNAVAILABLE/)
 })
+
+test('applies a capped fixed category discount from server data', () => {
+  const result = calculateOrder({ ...input, couponCode: 'ROSES5' }, { red: { name: 'Red bouquet', category: 'roses', price: 40000, active: true, stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }, { roses: { name: 'Roses offer', code: 'ROSES5', scope: 'CATEGORY', categoryId: 'roses', discountType: 'FIXED', value: 12000, maxDiscount: 5000, active: true } })
+  assert.equal(result.discount, 5000)
+  assert.equal(result.total, 80000)
+})
+
+test('rejects an unavailable product state', () => {
+  assert.throws(() => calculateOrder(input, { red: { name: 'Archived bouquet', price: 40000, active: true, status: 'UNAVAILABLE', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
+})

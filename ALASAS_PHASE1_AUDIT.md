@@ -65,6 +65,9 @@ Production Firebase data, and it does not push or deploy either repository.
   the discount on the order, and atomically limits usage by counter. Invalid,
   expired, below-minimum, or exhausted entered codes are rejected rather than
   silently accepted at the full price.
+- Coupon reservation compensation now attempts to release the usage counter
+  and usage marker if the subsequent order write fails, reducing leaked-use
+  risk on a failed creation.
 - The Admin product form now supports commercial product metadata, sale-price
   fields, stock, image URLs, marketing flags, and explicit `PUBLISHED`,
   `HIDDEN`, `DRAFT`, `UNAVAILABLE`, and `ARCHIVED` states. Customer catalog
@@ -74,6 +77,9 @@ Production Firebase data, and it does not push or deploy either repository.
   bank transfer, and ZainCash, including publish state, ordering, supported
   provinces, and allowed receiving details. Secret card fields remain rejected
   by the callable write policy.
+- Import/Export is now merge-only: collection imports update named records and
+  document imports update named fields without replacing or deleting omitted
+  data; invalid record keys/values are rejected before writes.
 - Customer Home now subscribes to visible public categories and uses them for
   its category cards, while retaining the existing visual fallback when no
   published categories exist.
@@ -143,8 +149,9 @@ Production Firebase data, and it does not push or deploy either repository.
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
-| Coupon pricing and usage | PASS (emulator only) | Server pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
+| Coupon pricing and usage | PASS (unit + emulator) | 7 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor and province-aware customer display; no Production mutation or live browser acceptance |
+| Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |

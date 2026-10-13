@@ -273,6 +273,7 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
   const claimValue = claim.snapshot.val()
   if (claimValue?.status === 'COMPLETE' && claimValue.orderId) return { orderId: claimValue.orderId, reused: true }
   const orderId = claimValue?.orderId || candidateOrderId
+  let discountReservation = null
 
   try {
     const [productsSnapshot, deliverySnapshot, paymentSnapshot, discountsSnapshot] = await Promise.all([
@@ -293,6 +294,7 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
       })
       if (!usage.committed) throw new Error('DISCOUNT_UNAVAILABLE')
       await discountRef.child(`usageOrders/${orderId}`).set(true)
+      discountReservation = discountRef
     }
     const now = Date.now()
     const record = {
@@ -328,6 +330,17 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
     await database.ref().update(updates)
     return { orderId, reused: false, paymentStatus: record.paymentStatus, total: record.total }
   } catch (error) {
+    if (discountReservation) {
+      try {
+        await discountReservation.child('usageOrders').child(orderId).remove()
+        await discountReservation.child('usageCount').transaction((current) => {
+          const count = Number.isInteger(current) && current > 0 ? current : 0
+          return count > 0 ? count - 1 : 0
+        })
+      } catch (compensationError) {
+        console.error('Discount reservation compensation failed', { orderId, discountId: order.discountDetail?.id, compensationError })
+      }
+    }
     throw toHttpsError(error)
   }
 })
