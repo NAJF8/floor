@@ -142,7 +142,7 @@ export const setStaffMembership = onCall({ region: 'europe-west1', enforceAppChe
   if (!current?.immutableBootstrap && requestedPermissions && typeof requestedPermissions === 'object' && !Array.isArray(requestedPermissions)) {
     for (const permission of permissionNames) if (typeof requestedPermissions[permission] === 'boolean') permissions[permission] = requestedPermissions[permission]
   }
-  const record = { uid, email: authUser.email || '', displayName: typeof request.data?.displayName === 'string' ? request.data.displayName.trim().slice(0, 120) : authUser.displayName || '', role, active, updatedAt: now, ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: now }) }
+  const record = { uid, email: authUser.email || '', displayName: typeof request.data?.displayName === 'string' ? request.data.displayName.trim().slice(0, 120) : authUser.displayName || '', role, active, permissions, updatedAt: now, ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: now }) }
   const updates = {}
   updates[`shopMemberships/${uid}/${SHOP_ID}`] = { ...record, permissions, ...(current?.immutableBootstrap ? { immutableBootstrap: true } : {}) }
   updates[`shops/${SHOP_ID}/private/staff/${uid}`] = record

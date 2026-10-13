@@ -118,6 +118,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - Staff membership updates now preserve or set an allowlisted permission map for
   catalog, orders, inventory, customers, audit, settings, and staff scopes;
   immutable bootstrap memberships cannot be changed through this flow.
+- Synthetic Emulator proof: a Manager with `catalog=true` and `products=false`
+  was read back with the same map in both membership and private staff records;
+  catalog create succeeded and product create returned `Missing permission:
+  products`.
 - All allowlisted `adminWrite` operations now append a non-sensitive
   `ADMIN_WRITE` activity record in the same multi-location update as the
   catalog/settings mutation. Emulator readback confirmed a Manager-created
@@ -180,7 +184,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
 | Staff UID membership linking | PASS (emulator only) | Auth UID lookup, membership/staff readback, non-Super Admin Super Admin assignment rejected |
-| Staff scope permissions | BUILD PASS; runtime NOT VERIFIED | Allowlisted membership permission map is wired; no live Admin browser acceptance or Production mutation |
+| Staff scope permissions | PASS (emulator only) | Permission map read back in both membership/staff paths; catalog write accepted and products write denied |
 | Default catalog seed | BLOCKED | Preview-only script exists; approved Admin credential is not configured |
 | GitHub image upload | BLOCKED | Server-side credential/service not present |
 
