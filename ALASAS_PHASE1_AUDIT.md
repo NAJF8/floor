@@ -65,6 +65,11 @@ Production Firebase data, and it does not push or deploy either repository.
   the discount on the order, and atomically limits usage by counter. Invalid,
   expired, below-minimum, or exhausted entered codes are rejected rather than
   silently accepted at the full price.
+- The Admin product form now supports commercial product metadata, sale-price
+  fields, stock, image URLs, marketing flags, and explicit `PUBLISHED`,
+  `HIDDEN`, `DRAFT`, `UNAVAILABLE`, and `ARCHIVED` states. Customer catalog
+  subscription filters non-published states and shows a valid compare-at price
+  and discount badge when present.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
@@ -109,7 +114,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
-| Product/category CRUD | NOT VERIFIED | No Production write performed |
+| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor and status filtering are local-only; no Production write performed |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
 | Coupon pricing and usage | PASS (emulator only) | Server pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |

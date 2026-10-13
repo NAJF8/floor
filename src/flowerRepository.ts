@@ -10,7 +10,11 @@ export type FlowerProductRecord = {
   image?: string
   imageUrls?: string[]
   description?: string
+  compareAtPrice?: number
+  discountPercent?: number
+  badge?: string
   active?: boolean
+  status?: string
   stock?: number
 }
 
@@ -59,7 +63,7 @@ export function subscribeToShopProducts(
       if (!item || typeof item !== 'object' || Array.isArray(item)) continue
       const record = item as Record<string, unknown>
       if (typeof record.name !== 'string' || typeof record.price !== 'number' || !Number.isFinite(record.price) || typeof record.category !== 'string') continue
-      if (record.active === false) continue
+      if (record.active === false || ['HIDDEN', 'DRAFT', 'UNAVAILABLE', 'ARCHIVED'].includes(String(record.status || '').toUpperCase())) continue
       products.push({
         id,
         name: record.name,
@@ -69,6 +73,10 @@ export function subscribeToShopProducts(
         ...(typeof record.image === 'string' ? { image: record.image } : {}),
         ...(Array.isArray(record.imageUrls) ? { imageUrls: record.imageUrls.filter((item): item is string => typeof item === 'string') } : {}),
         ...(typeof record.description === 'string' ? { description: record.description } : {}),
+        ...(Number.isInteger(record.compareAtPrice) && (record.compareAtPrice as number) > Number(record.price) ? { compareAtPrice: record.compareAtPrice as number } : {}),
+        ...(Number.isInteger(record.discountPercent) && (record.discountPercent as number) > 0 ? { discountPercent: record.discountPercent as number } : {}),
+        ...(typeof record.badge === 'string' ? { badge: record.badge } : {}),
+        ...(typeof record.status === 'string' ? { status: record.status } : {}),
         ...(typeof record.stock === 'number' ? { stock: record.stock } : {}),
         active: true,
       })
