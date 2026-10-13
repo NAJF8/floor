@@ -344,3 +344,21 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
     throw toHttpsError(error)
   }
 })
+
+export const getCustomerOrder = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const uid = authUid(request)
+  const orderId = idText(request.data?.orderId, 'orderId')
+  const snapshot = await database.ref(orderPath(orderId)).get()
+  const order = snapshot.val()
+  if (!order || order.uid !== uid) throw new HttpsError('not-found', 'Order not found.')
+  return {
+    orderId,
+    orderStatus: order.orderStatus || 'NEW',
+    paymentStatus: order.paymentStatus || 'UNPAID',
+    total: Number.isInteger(order.total) ? order.total : 0,
+    createdAt: order.createdAt || null,
+    updatedAt: order.updatedAt || null,
+    deliveryAt: order.deliveryAt || '',
+    items: Array.isArray(order.items) ? order.items.map(item => ({ name: item.name || '', quantity: item.quantity || 0, lineTotal: item.lineTotal || 0 })) : [],
+  }
+})

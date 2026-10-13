@@ -86,6 +86,11 @@ Production Firebase data, and it does not push or deploy either repository.
 - Customer favorites now persist locally for anonymous visitors and render in
   the Favorites page; Google-account synchronization remains intentionally
   unimplemented until a safe user-scoped backend path is added.
+- Customer order tracking now calls a dedicated `getCustomerOrder` callable;
+  it returns a sanitized order summary only when the authenticated UID owns
+  the requested order. Synthetic emulator readback returned the owner's
+  `PREPARING` order and 45,000 IQD total, while a second synthetic UID received
+  `NOT_FOUND`.
 - Admin Dashboard now derives period-scoped confirmed sales, payment/order
   statuses, discounts, recent orders, and low-stock alerts from its authorized
   Firebase reads. It is still local-only and has no live authenticated browser
@@ -156,6 +161,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Favorites | BUILD PASS; local visitor behavior NOT VERIFIED | LocalStorage persistence and Favorites rendering are wired; account sync is not implemented |
+| Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
