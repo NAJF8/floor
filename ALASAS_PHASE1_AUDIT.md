@@ -115,6 +115,9 @@ Production Firebase data, and it does not push or deploy either repository.
 - Private Admin reads now use `adminRead` callable polling and local Rules set the
   `private` parent to non-readable from the browser. Staff linking requires an
   existing Firebase Auth UID and protects immutable bootstrap memberships.
+- Staff membership updates now preserve or set an allowlisted permission map for
+  catalog, orders, inventory, customers, audit, settings, and staff scopes;
+  immutable bootstrap memberships cannot be changed through this flow.
 - All allowlisted `adminWrite` operations now append a non-sensitive
   `ADMIN_WRITE` activity record in the same multi-location update as the
   catalog/settings mutation. Emulator readback confirmed a Manager-created
@@ -177,6 +180,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
 | Staff UID membership linking | PASS (emulator only) | Auth UID lookup, membership/staff readback, non-Super Admin Super Admin assignment rejected |
+| Staff scope permissions | BUILD PASS; runtime NOT VERIFIED | Allowlisted membership permission map is wired; no live Admin browser acceptance or Production mutation |
 | Default catalog seed | BLOCKED | Preview-only script exists; approved Admin credential is not configured |
 | GitHub image upload | BLOCKED | Server-side credential/service not present |
 

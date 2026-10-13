@@ -136,9 +136,15 @@ export const setStaffMembership = onCall({ region: 'europe-west1', enforceAppChe
   if (current?.immutableBootstrap && (current.role !== role || current.active !== request.data?.active)) throw new HttpsError('permission-denied', 'Bootstrap Super Admin membership is immutable.')
   const active = request.data?.active !== false
   const now = Date.now()
+  const permissionNames = ['products', 'catalog', 'orders', 'inventory', 'customers', 'audit', 'settings', 'staff']
+  const requestedPermissions = request.data?.permissions
+  const permissions = { ...(current?.permissions || {}) }
+  if (!current?.immutableBootstrap && requestedPermissions && typeof requestedPermissions === 'object' && !Array.isArray(requestedPermissions)) {
+    for (const permission of permissionNames) if (typeof requestedPermissions[permission] === 'boolean') permissions[permission] = requestedPermissions[permission]
+  }
   const record = { uid, email: authUser.email || '', displayName: typeof request.data?.displayName === 'string' ? request.data.displayName.trim().slice(0, 120) : authUser.displayName || '', role, active, updatedAt: now, ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: now }) }
   const updates = {}
-  updates[`shopMemberships/${uid}/${SHOP_ID}`] = { ...record, permissions: current?.permissions || {}, ...(current?.immutableBootstrap ? { immutableBootstrap: true } : {}) }
+  updates[`shopMemberships/${uid}/${SHOP_ID}`] = { ...record, permissions, ...(current?.immutableBootstrap ? { immutableBootstrap: true } : {}) }
   updates[`shops/${SHOP_ID}/private/staff/${uid}`] = record
   updates[activityPath()] = { action: 'STAFF_MEMBERSHIP_UPDATED', actorUid: actor.uid, targetUid: uid, role, active, createdAt: now }
   await database.ref().update(updates)
