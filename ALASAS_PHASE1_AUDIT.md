@@ -60,6 +60,11 @@ Production Firebase data, and it does not push or deploy either repository.
   checkout. Checkout now reads enabled payment methods, delivery areas, and the
   shop WhatsApp setting from the public Firebase config and prepares a truthful
   WhatsApp message after order creation.
+- Coupon checkout is now wired to the server: the customer sends an optional
+  coupon code, the backend selects one eligible server-side discount, records
+  the discount on the order, and atomically limits usage by counter. Invalid,
+  expired, below-minimum, or exhausted entered codes are rejected rather than
+  silently accepted at the full price.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
@@ -71,6 +76,11 @@ Production Firebase data, and it does not push or deploy either repository.
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
   `reused: true` without another decrement.
+- Latest synthetic coupon readback: first order total `77,000` from an `80,000`
+  subtotal plus `5,000` delivery minus `8,000` coupon discount; retry reused
+  the same order ID; a second order with the exhausted code returned
+  `DISCOUNT_UNAVAILABLE`; usage count was `1` and only the first order was
+  recorded.
 
 ## Blocking gaps before a Production release
 
@@ -102,6 +112,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Product/category CRUD | NOT VERIFIED | No Production write performed |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
+| Coupon pricing and usage | PASS (emulator only) | Server pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |

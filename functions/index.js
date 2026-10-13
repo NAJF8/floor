@@ -245,7 +245,7 @@ export const setOrderStatus = onCall({ region: 'europe-west1', enforceAppCheck: 
 
 function toHttpsError(error) {
   const code = error instanceof Error ? error.message : 'INVALID_ORDER'
-  const known = new Set(['INVALID_ORDER', 'INVALID_ITEMS', 'INVALID_ITEM', 'DUPLICATE_PRODUCT', 'INVALID_PRODUCT_ID', 'INVALID_QUANTITY', 'INVALID_CUSTOMER_NAME', 'INVALID_PHONE', 'INVALID_RECIPIENT_NAME', 'INVALID_RECIPIENT_PHONE', 'INVALID_PROVINCE', 'INVALID_DISTRICT', 'INVALID_ADDRESS', 'INVALID_DELIVERY_AT', 'INVALID_PAYMENT_METHOD_ID', 'INVALID_IDEMPOTENCY_KEY', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'PAYMENT_METHOD_UNAVAILABLE', 'DELIVERY_AREA_UNCONFIGURED'])
+  const known = new Set(['INVALID_ORDER', 'INVALID_ITEMS', 'INVALID_ITEM', 'DUPLICATE_PRODUCT', 'INVALID_PRODUCT_ID', 'INVALID_QUANTITY', 'INVALID_CUSTOMER_NAME', 'INVALID_PHONE', 'INVALID_RECIPIENT_NAME', 'INVALID_RECIPIENT_PHONE', 'INVALID_PROVINCE', 'INVALID_DISTRICT', 'INVALID_ADDRESS', 'INVALID_DELIVERY_AT', 'INVALID_PAYMENT_METHOD_ID', 'INVALID_IDEMPOTENCY_KEY', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'PAYMENT_METHOD_UNAVAILABLE', 'DELIVERY_AREA_UNCONFIGURED', 'DISCOUNT_UNAVAILABLE'])
   return new HttpsError(known.has(code) ? 'failed-precondition' : 'internal', known.has(code) ? code : 'Order creation failed safely.')
 }
 
@@ -267,12 +267,25 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
   const orderId = claimValue?.orderId || candidateOrderId
 
   try {
-    const [productsSnapshot, deliverySnapshot, paymentSnapshot] = await Promise.all([
+    const [productsSnapshot, deliverySnapshot, paymentSnapshot, discountsSnapshot] = await Promise.all([
       database.ref(`shops/${SHOP_ID}/products`).get(),
       database.ref(`shops/${SHOP_ID}/public/delivery`).get(),
       database.ref(`shops/${SHOP_ID}/public/paymentMethods`).get(),
+      database.ref(`shops/${SHOP_ID}/public/discounts`).get(),
     ])
-    const order = calculateOrder(input, productsSnapshot.val() || {}, deliverySnapshot.val() || {}, paymentSnapshot.val() || {})
+    const order = calculateOrder(input, productsSnapshot.val() || {}, deliverySnapshot.val() || {}, paymentSnapshot.val() || {}, discountsSnapshot.val() || {})
+    if (order.discountDetail?.id) {
+      const discountRef = database.ref(`shops/${SHOP_ID}/public/discounts/${order.discountDetail.id}`)
+      const discountSnapshot = await discountRef.get()
+      const discountValue = discountSnapshot.val() || {}
+      const usage = await discountRef.child('usageCount').transaction((current) => {
+        const count = Number.isInteger(current) && current >= 0 ? current : 0
+        if (Number.isInteger(discountValue.maxUses) && count >= discountValue.maxUses) return
+        return count + 1
+      })
+      if (!usage.committed) throw new Error('DISCOUNT_UNAVAILABLE')
+      await discountRef.child(`usageOrders/${orderId}`).set(true)
+    }
     const now = Date.now()
     const record = {
       id: orderId,
@@ -286,9 +299,11 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
       address: order.address,
       deliveryAt: order.deliveryAt,
       giftMessage: order.giftMessage,
+      couponCode: order.couponCode,
       items: order.items,
       subtotal: order.subtotal,
       discount: order.discount,
+      discountDetail: order.discountDetail || null,
       deliveryFee: order.deliveryFee,
       total: order.total,
       paymentMethod: order.paymentMethod,
