@@ -3,7 +3,7 @@ import { deleteApp, initializeApp } from 'firebase-admin/app'
 import { getDatabase } from 'firebase-admin/database'
 import { deleteApp as deleteClientApp, initializeApp as initializeClientApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { connectDatabaseEmulator, getDatabase as getClientDatabase, ref as clientRef, set as clientSet } from 'firebase/database'
+import { connectDatabaseEmulator, get as clientGet, getDatabase as getClientDatabase, ref as clientRef, set as clientSet } from 'firebase/database'
 
 const SHOP_ID = 'floor-232bc'
 const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST || ''
@@ -62,7 +62,27 @@ async function clientWrite(user, path, value) {
     await clientSet(clientRef(clientDatabase, path), value)
     return 'WRITE_SUCCEEDED'
   } catch (error) {
-    return error?.code || String(error)
+    const message = String(error?.message || error)
+    return error?.code || (message.toLowerCase().includes('permission denied') ? 'PERMISSION_DENIED' : message)
+  } finally {
+    await signOut(clientAuth).catch(() => undefined)
+    await deleteClientApp(clientApp)
+  }
+}
+
+async function clientRead(user, path) {
+  const clientApp = initializeClientApp({ apiKey: 'local-emulator-key', authDomain: 'localhost', databaseURL: `http://${host}?ns=${namespace}`, projectId: SHOP_ID }, `rules-read-client-${Date.now()}-${Math.random()}`)
+  const clientAuth = getAuth(clientApp)
+  const clientDatabase = getClientDatabase(clientApp)
+  connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectDatabaseEmulator(clientDatabase, '127.0.0.1', 9000)
+  try {
+    await signInWithEmailAndPassword(clientAuth, user.email, user.password)
+    await clientGet(clientRef(clientDatabase, path))
+    return 'READ_SUCCEEDED'
+  } catch (error) {
+    const message = String(error?.message || error)
+    return error?.code || (message.toLowerCase().includes('permission denied') ? 'PERMISSION_DENIED' : message)
   } finally {
     await signOut(clientAuth).catch(() => undefined)
     await deleteClientApp(clientApp)
@@ -92,8 +112,14 @@ try {
   assert.equal(staffRecord.val().email, staff.email)
   const authenticatedPrivateWriteStatus = await clientWrite(customer, `shops/${SHOP_ID}/private/orders/direct-probe`, { probe: true })
   const authenticatedUserWriteStatus = await clientWrite(customer, `users/${customer.uid}/favorites/direct-probe`, true)
+  const ownUserReadStatus = await clientRead(customer, `users/${customer.uid}`)
+  const otherUserReadStatus = await clientRead(customer, `users/${otherCustomer.uid}`)
+  const privateReadStatus = await clientRead(customer, `shops/${SHOP_ID}/private/orders`)
   assert.equal(authenticatedPrivateWriteStatus, 'PERMISSION_DENIED')
   assert.equal(authenticatedUserWriteStatus, 'PERMISSION_DENIED')
+  assert.equal(ownUserReadStatus, 'READ_SUCCEEDED')
+  assert.equal(otherUserReadStatus, 'PERMISSION_DENIED')
+  assert.equal(privateReadStatus, 'PERMISSION_DENIED')
 
   const category = await callFunction('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Synthetic category', visible: true, active: true } })
   assert.match(category.key, /^[A-Za-z0-9_-]+$/)
@@ -137,7 +163,7 @@ try {
   assert.equal(transferOrder.paymentStatus, 'PENDING_REVIEW')
   const transferSnapshot = await root.child(`private/orders/${transferOrder.orderId}`).get()
   assert.equal(transferSnapshot.val().transferReference, 'SYNTHETIC-REF-1')
-  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference }, null, 2))
+  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, ownUserReadStatus, otherUserReadStatus, privateReadStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference }, null, 2))
 } finally {
   await root.remove()
   await database.ref('shopMemberships').remove()
