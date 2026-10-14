@@ -100,13 +100,14 @@ function useCart(): CartState {
 }
 
 function App() {
-  const cart = useCart(); const [menu, setMenu] = useState(false); const [toast, setToast] = useState('')
+  const cart = useCart(); const location = useLocation(); const [menu, setMenu] = useState(false); const [toast, setToast] = useState('')
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
   return <CatalogProvider><div className="app-shell">
     <FavoriteAccountSync />
     <Announcement />
     <Header menu={menu} setMenu={setMenu} cartCount={cart.count} />
     <AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="toast"><Check size={16} /> {toast}</motion.div>}</AnimatePresence>
+    {location.pathname === '/checkout' && <CheckoutReview cart={cart} />}
     <Routes>
       <Route path="/" element={<Home onAdd={(id) => { cart.add(id); notify('تمت إضافة الباقة إلى السلة') }} />} />
       <Route path="/shop" element={<Shop onAdd={(id) => { cart.add(id); notify('تمت إضافة المنتج إلى السلة') }} />} />
@@ -203,6 +204,14 @@ function Checkout({ cart }: { cart: CartState }) {
   }
   return <main className="page"><div className="container narrow"><div className="page-intro compact"><div><div className="eyebrow">إتمام الطلب</div><h1>باقي <i>كم تفصيلة.</i></h1></div></div>{created ? <div className="demo-card"><Check size={24} /><h3>تم تسجيل الطلب</h3><p>رقم الطلب: <b>{created.orderId}</b></p><p>الإجمالي المحسوب من الخادم: <b>{money(created.total)}</b></p><p>الحالة: {created.paymentStatus === 'UNPAID' ? 'الدفع عند الاستلام — غير مدفوع' : 'بانتظار مراجعة الدفع'}</p></div> : <div className="checkout-layout"><form className="checkout-form" onSubmit={submit}><div className="stepper"><span className="active">01 البيانات</span><span>02 التوصيل</span><span>03 المراجعة</span></div><label>الاسم الكامل<input required value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="مثال: زهراء محمد" /></label><label>رقم الهاتف<input required value={phone} onChange={e => setPhone(e.target.value)} placeholder="07xx xxx xxxx" /></label><label>اسم المستلم<input required value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="اسم مستلم الهدية" /></label><label>هاتف المستلم<input required value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} placeholder="07xx xxx xxxx" /></label><label>المحافظة<select value={province} onChange={e => setProvince(e.target.value)}><option>بغداد</option><option>أربيل</option><option>البصرة</option></select></label><label>المنطقة أو القضاء<input required value={district} onChange={e => setDistrict(e.target.value)} placeholder="مثال: الكرادة" /></label><label>العنوان التفصيلي<textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="الشارع، أقرب نقطة دالة" /></label><label>موعد التسليم المطلوب<input required value={deliveryAt} onChange={e => setDeliveryAt(e.target.value)} placeholder="مثال: 2026-10-20 مساءً" /></label><label>رسالة البطاقة<textarea value={giftMessage} onChange={e => setGiftMessage(e.target.value)} placeholder="اختياري" /></label>{feedback && <p className="demo-note">{feedback}</p>}<button className="btn btn-dark full" disabled={busy}>{busy ? 'جارٍ التحقق والتسجيل...' : 'تأكيد وإرسال الطلب'} <ArrowLeft size={18} /></button></form><aside className="demo-card"><BadgePercent size={24} /><h3>{live ? 'طلب متصل بالمتجر' : 'عرض تجريبي'}</h3><p>{live ? 'سيتم احتساب السعر والتوصيل من إعدادات المتجر على الخادم.' : 'لم تُنشر منتجات المتجر بعد؛ لن يتم إرسال طلب حقيقي من هذه المعاينة.'}</p><div className="demo-order"><span>الدفع</span><b>الدفع عند الاستلام</b></div></aside></div>}</div></main>
 }
+function CheckoutReview({ cart }: { cart: CartState }) {
+  const { products } = useCatalog()
+  const lines = cart.items.map(item => ({ item, product: products.find(product => product.id === item.productId) })).filter(line => line.product)
+  if (!lines.length) return null
+  const subtotal = lines.reduce((sum, line) => sum + (line.product?.price || 0) * line.item.quantity, 0)
+  return <section className="checkout-review"><div className="container narrow"><div className="checkout-review-card"><div><div className="eyebrow">مراجعة السلة</div><h2>طلبك قبل الإرسال</h2></div><div className="checkout-review-lines">{lines.map(({ item, product }) => <div className="checkout-review-line" key={item.productId}><span>{product?.name} × {item.quantity}</span><b>{money((product?.price || 0) * item.quantity)}</b></div>)}</div><div className="checkout-review-total"><span>المجموع قبل التوصيل والخصم</span><b>{money(subtotal)}</b></div><p>تظهر أجور التوصيل حسب المنطقة داخل النموذج، ويعيد الخادم التحقق من السعر والخصم والتوفر عند الإرسال.</p></div></div></section>
+}
+
 function CheckoutConnected({ cart }: { cart: CartState }) {
   const { products: catalogProducts, live, publicConfig } = useCatalog()
   const [customerName, setCustomerName] = useState('')
