@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { calculateOrder, normalizeOrderInput } from '../src/order.js'
+import { calculateOrder, canTransitionOrderStatus, normalizeOrderInput } from '../src/order.js'
 
 const input = {
   items: [{ productId: 'red', quantity: 2 }],
@@ -57,6 +57,15 @@ test('rejects an unavailable product state', () => {
 
 test('requires an explicit published state for checkout', () => {
   assert.throws(() => calculateOrder(input, { red: { name: 'Unreviewed bouquet', price: 40000, active: true, stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
+})
+
+test('enforces the order status state machine', () => {
+  assert.equal(canTransitionOrderStatus('NEW', 'PAYMENT_REVIEW'), true)
+  assert.equal(canTransitionOrderStatus('PAYMENT_CONFIRMED', 'APPROVED'), true)
+  assert.equal(canTransitionOrderStatus('APPROVED', 'PREPARING'), true)
+  assert.equal(canTransitionOrderStatus('NEW', 'DELIVERED'), false)
+  assert.equal(canTransitionOrderStatus('PREPARING', 'APPROVED'), false)
+  assert.equal(canTransitionOrderStatus('DELIVERED', 'CANCELLED'), false)
 })
 
 test('persists sanitized cart options without trusting them for price', () => {

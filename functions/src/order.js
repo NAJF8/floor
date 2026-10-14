@@ -3,6 +3,25 @@ export const SHOP_ID = 'floor-232bc'
 const MAX_ITEMS = 40
 const MAX_QUANTITY = 99
 
+export const ORDER_STATUS_TRANSITIONS = Object.freeze({
+  NEW: Object.freeze(['AWAITING_PAYMENT', 'PAYMENT_REVIEW', 'CANCELLED', 'REJECTED']),
+  AWAITING_PAYMENT: Object.freeze(['PAYMENT_REVIEW', 'CANCELLED', 'REJECTED']),
+  PAYMENT_REVIEW: Object.freeze(['CANCELLED', 'REJECTED']),
+  PAYMENT_CONFIRMED: Object.freeze(['APPROVED', 'CANCELLED', 'REJECTED']),
+  APPROVED: Object.freeze(['PREPARING', 'CANCELLED', 'REJECTED']),
+  PREPARING: Object.freeze(['READY_FOR_DELIVERY', 'CANCELLED']),
+  READY_FOR_DELIVERY: Object.freeze(['OUT_FOR_DELIVERY', 'CANCELLED']),
+  OUT_FOR_DELIVERY: Object.freeze(['DELIVERED', 'CANCELLED']),
+  DELIVERED: Object.freeze([]),
+  CANCELLED: Object.freeze([]),
+  REJECTED: Object.freeze([]),
+})
+
+export function canTransitionOrderStatus(currentStatus, nextStatus) {
+  if (currentStatus === nextStatus) return true
+  return Boolean(ORDER_STATUS_TRANSITIONS[currentStatus]?.includes(nextStatus))
+}
+
 export function text(value, field, max = 240) {
   if (typeof value !== 'string' || value.trim().length === 0 || value.length > max) {
     throw new Error(`INVALID_${field.toUpperCase()}`)

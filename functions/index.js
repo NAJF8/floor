@@ -2,7 +2,7 @@ import { getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
-import { calculateOrder, normalizeOrderInput, SHOP_ID } from './src/order.js'
+import { calculateOrder, canTransitionOrderStatus, normalizeOrderInput, SHOP_ID } from './src/order.js'
 
 const emulatorMode = Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_DATABASE_EMULATOR_HOST || process.env.FUNCTIONS_EMULATOR)
 
@@ -164,7 +164,9 @@ export const confirmOrderPayment = onCall({ region: 'europe-west1', enforceAppCh
   const now = Date.now()
   const result = await orderRef.transaction((current) => {
     if (!current || current.paymentStatus === 'CONFIRMED') return current
-    return { ...current, paymentStatus: 'CONFIRMED', paidAmount: current.total, paymentConfirmedBy: actor.uid, paymentConfirmedAt: now, updatedAt: now }
+    const currentStatus = current.orderStatus || 'NEW'
+    const nextStatus = ['NEW', 'AWAITING_PAYMENT', 'PAYMENT_REVIEW'].includes(currentStatus) ? 'PAYMENT_CONFIRMED' : currentStatus
+    return { ...current, paymentStatus: 'CONFIRMED', orderStatus: nextStatus, paidAmount: current.total, paymentConfirmedBy: actor.uid, paymentConfirmedAt: now, updatedAt: now }
   })
   const after = result.snapshot.val()
   if (!after) throw new HttpsError('not-found', 'Order not found.')
@@ -252,8 +254,16 @@ export const setOrderStatus = onCall({ region: 'europe-west1', enforceAppCheck: 
   const allowed = new Set(['NEW', 'AWAITING_PAYMENT', 'PAYMENT_REVIEW', 'PAYMENT_CONFIRMED', 'APPROVED', 'PREPARING', 'READY_FOR_DELIVERY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REJECTED', 'CANCELLED'])
   if (!allowed.has(nextStatus) || ['PAYMENT_CONFIRMED', 'APPROVED'].includes(nextStatus)) throw new HttpsError('invalid-argument', 'Use the dedicated payment or approval action.')
   const orderRef = database.ref(orderPath(orderId))
-  const result = await orderRef.transaction((current) => current ? { ...current, orderStatus: nextStatus, updatedAt: Date.now() } : undefined)
+  const existing = (await orderRef.get()).val()
+  if (!existing) throw new HttpsError('not-found', 'Order not found.')
+  if (!canTransitionOrderStatus(existing.orderStatus || 'NEW', nextStatus)) throw new HttpsError('failed-precondition', 'INVALID_ORDER_TRANSITION')
+  const result = await orderRef.transaction((current) => {
+    if (!current) return undefined
+    const currentStatus = current.orderStatus || 'NEW'
+    return canTransitionOrderStatus(currentStatus, nextStatus) ? { ...current, orderStatus: nextStatus, updatedAt: Date.now() } : current
+  })
   if (!result.committed) throw new HttpsError('not-found', 'Order not found.')
+  if (result.snapshot.val()?.orderStatus !== nextStatus) throw new HttpsError('failed-precondition', 'INVALID_ORDER_TRANSITION')
   const now = Date.now()
   await database.ref().update({ [activityPath()]: { action: 'ORDER_STATUS_CHANGED', actorUid: actor.uid, orderId, orderStatus: nextStatus, createdAt: now } })
   return { orderId, orderStatus: result.snapshot.val()?.orderStatus, reused: result.snapshot.val()?.updatedAt !== now }
