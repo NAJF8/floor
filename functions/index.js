@@ -103,11 +103,6 @@ export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: fals
     await database.ref().update(updates)
     return { actorUid: actor.uid }
   }
-  if (operation === 'replace') {
-    const updates = { [path]: request.data?.value ?? null, [activityPath()]: audit(target.key) }
-    await database.ref().update(updates)
-    return { actorUid: actor.uid }
-  }
   throw new HttpsError('invalid-argument', 'Unsupported administrative operation.')
 })
 
