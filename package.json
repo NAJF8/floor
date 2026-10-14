@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "test:staff-emulator": "node scripts/test-staff-emulator.mjs",
     "provision:super-admins": "node scripts/provision-super-admins.mjs",
     "seed:default-catalog": "node scripts/seed-default-catalog.mjs"
   },
