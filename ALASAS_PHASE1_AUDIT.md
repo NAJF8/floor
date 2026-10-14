@@ -203,6 +203,12 @@ Production Firebase data, and it does not push or deploy either repository.
   hero, category cards, product cards, and no blank screen. The isolated
   browser could not reach RTDB Emulator port `9000`, so it displayed the
   intentional catalog fallback; live catalog rendering remains NOT VERIFIED.
+  A fresh local flow reached `/shop` and rendered the demo product cards after
+  clicking `تسوّق الباقات`; the Admin local flow reached the Google Login page.
+  Neither flow had an application console error. The Customer console showed
+  only React Router future warnings and the expected live-RTDB missing-index
+  warning, which further confirms that local Rules/index changes are not
+  deployed to Production.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
