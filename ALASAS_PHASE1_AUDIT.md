@@ -59,7 +59,8 @@ Production Firebase data, and it does not push or deploy either repository.
   The integration read back a 75,000 IQD order, returned `UNPAID`, reused the
   same order ID on retry, and rejected an unauthenticated call. No emulator
   data or credentials were sent to Production.
-- The customer UI now uses a product-id/quantity cart, reads the live catalog,
+- The customer UI now uses a product-id/quantity cart with persisted packaging,
+  packaging-color, add-on, and gift-message options, reads the live catalog,
   requires Google sign-in before calling `createOrder`, and displays the
   server-returned order ID and total. Preview products are visibly blocked from
   checkout. Checkout now reads enabled payment methods, delivery areas, and the
@@ -73,6 +74,9 @@ Production Firebase data, and it does not push or deploy either repository.
 - Coupon reservation compensation now attempts to release the usage counter
   and usage marker if the subsequent order write fails, reducing leaked-use
   risk on a failed creation.
+- Checkout now sends cart options through the callable; the server sanitizes
+  them, filters add-ons against the catalog product, and still calculates all
+  monetary values from Firebase. Unit coverage passed for this boundary.
 - The Admin product form now supports commercial product metadata, sale-price
   fields, stock, image URLs, marketing flags, and explicit `PUBLISHED`,
   `HIDDEN`, `DRAFT`, `UNAVAILABLE`, and `ARCHIVED` states. Customer catalog
@@ -207,7 +211,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
-| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
+| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Product IDs/config, persisted cart options, and callable sanitization are wired; no deployed callable or authenticated browser acceptance |
 | Coupon pricing and usage | PASS (unit + emulator) | 7 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
