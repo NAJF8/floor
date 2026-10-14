@@ -13,12 +13,12 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    now ends at `0e80513`; recent commits add local acceptance tooling,
+    now ends at `1c8f333`; recent commits add local acceptance tooling,
     configuration hygiene, delivery/payment UI boundary checks, and audit-only
     updates. The repeatable Auth/Database/Functions harness remains in the
     same isolated branch.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `43a2ee1`, with a clean
+  - The isolated implementation branch now ends at `7f7acb8`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -75,11 +75,13 @@ Production Firebase data, and it does not push or deploy either repository.
   checkout. Checkout now reads enabled payment methods, delivery areas, and the
   shop WhatsApp setting from the public Firebase config and prepares a truthful
   WhatsApp message after order creation.
-- Coupon checkout is now wired to the server: the customer sends an optional
-  coupon code, the backend selects one eligible server-side discount, records
-  the discount on the order, and atomically limits usage by counter. Invalid,
+- Coupon and promotion checkout is now wired to the server: the customer sends
+  an optional coupon code, while an active discount with an empty code is an
+  automatic promotion. The backend selects one eligible server-side discount,
+  records it on the order, and atomically limits usage by counter. Invalid,
   expired, below-minimum, or exhausted entered codes are rejected rather than
-  silently accepted at the full price.
+  silently accepted at the full price. The Admin editor explicitly labels the
+  empty-code automatic-promotion path.
 - Coupon reservation compensation now attempts to release the usage counter
   and usage marker if the subsequent order write fails, reducing leaked-use
   risk on a failed creation.
@@ -297,6 +299,10 @@ Production Firebase data, and it does not push or deploy either repository.
   subtotal plus `5,000` delivery minus `4,000` coupon discount; a second order
   with the exhausted code returned `DISCOUNT_UNAVAILABLE` and only one usage
   was accepted.
+- The same harness read back an automatic category promotion at `42,000` from
+  the `45,000` normal total, then confirmed the one-use promotion was exhausted
+  and the next no-code order returned to `45,000`. The unit suite now has 11
+  passing pricing/state tests.
 - Repeatable local Auth/Database/Functions acceptance passed with synthetic
   customer, manager, and second-customer identities. Server pricing returned
   `45,000` IQD, the idempotency retry reused the order, the owner read
@@ -367,7 +373,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, readback, retry idempotency, and owner-only access; Production callable is not deployed |
 | Customer cart/checkout wiring | PASS (local config/filter browser); callable Production NOT VERIFIED | CUA read back enabled delivery/payment configuration and omitted disabled delivery; no deployed callable or authenticated live checkout |
-| Coupon pricing and usage | PASS (unit + emulator) | 8 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
+| Coupon pricing and usage | PASS (unit + emulator) | 11 server pricing/state tests; emulator coupon and automatic-promotion totals, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Destructive admin deletes | PASS (local code/test boundary) | Callable rejects `delete`; category and collection UI use archive/disable updates; no live mutation acceptance |
