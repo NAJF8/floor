@@ -14,6 +14,7 @@
     "shops": {
       "$shopId": {
         "products": {
+          ".indexOn": ["status"],
           ".read": "query.orderByChild == 'status' && query.equalTo == 'PUBLISHED'",
           ".write": false
         },

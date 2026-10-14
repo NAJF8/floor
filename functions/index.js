@@ -8,9 +8,10 @@ const emulatorMode = Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST || process.
 
 if (!getApps().length) {
   const emulatorHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST
+  const emulatorNamespace = process.env.FIREBASE_DATABASE_EMULATOR_NAMESPACE || `${SHOP_ID}-default-rtdb`
   initializeApp({
     projectId: SHOP_ID,
-    databaseURL: emulatorHost ? `http://${emulatorHost}?ns=${SHOP_ID}` : 'https://floor-232bc-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL: emulatorHost ? `http://${emulatorHost}?ns=${emulatorNamespace}` : 'https://floor-232bc-default-rtdb.europe-west1.firebasedatabase.app',
   })
 }
 const database = getDatabase()
