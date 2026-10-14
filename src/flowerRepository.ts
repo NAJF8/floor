@@ -14,6 +14,7 @@ export type FlowerProductRecord = {
   discountPercent?: number
   badge?: string
   packaging?: string
+  colors?: string[]
   addOns?: string[]
   active?: boolean
   status?: string
@@ -88,6 +89,7 @@ export function subscribeToShopProducts(
         ...(Number.isInteger(record.discountPercent) && (record.discountPercent as number) > 0 ? { discountPercent: record.discountPercent as number } : {}),
         ...(typeof record.badge === 'string' ? { badge: record.badge } : {}),
         ...(typeof record.packaging === 'string' ? { packaging: record.packaging } : {}),
+        ...(Array.isArray(record.colors) ? { colors: record.colors.filter((item): item is string => typeof item === 'string') } : {}),
         ...(Array.isArray(record.addOns) ? { addOns: record.addOns.filter((item): item is string => typeof item === 'string') } : {}),
         ...(typeof record.status === 'string' ? { status: record.status } : {}),
         ...(typeof record.stock === 'number' ? { stock: record.stock } : {}),

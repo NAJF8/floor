@@ -54,3 +54,12 @@ test('applies a capped fixed category discount from server data', () => {
 test('rejects an unavailable product state', () => {
   assert.throws(() => calculateOrder(input, { red: { name: 'Archived bouquet', price: 40000, active: true, status: 'UNAVAILABLE', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
 })
+
+test('persists sanitized cart options without trusting them for price', () => {
+  const result = calculateOrder({ ...input, items: [{ productId: 'red', quantity: 1, packaging: 'Premium wrap', packagingColor: 'أوف وايت', addOns: ['Ribbon', 'Unlisted'], giftMessage: 'Happy day' }] }, { red: { name: 'Red bouquet', price: 40000, active: true, stock: 3, packaging: 'Standard wrap', addOns: ['Ribbon', 'Card'] } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } })
+  assert.equal(result.total, 45000)
+  assert.equal(result.items[0].packaging, 'Premium wrap')
+  assert.equal(result.items[0].packagingColor, 'أوف وايت')
+  assert.deepEqual(result.items[0].addOns, ['Ribbon'])
+  assert.equal(result.items[0].giftMessage, 'Happy day')
+})

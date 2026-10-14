@@ -25,7 +25,15 @@ export function normalizeOrderInput(input) {
     const productId = text(item.productId, 'product_id', 80)
     if (seen.has(productId)) throw new Error('DUPLICATE_PRODUCT')
     seen.add(productId)
-    return { productId, quantity: integer(item.quantity, 'quantity', { min: 1, max: MAX_QUANTITY }) }
+    const addOns = Array.isArray(item.addOns) ? item.addOns.filter((value) => typeof value === 'string').map((value) => value.trim().slice(0, 120)).filter(Boolean).slice(0, 20) : null
+    return {
+      productId,
+      quantity: integer(item.quantity, 'quantity', { min: 1, max: MAX_QUANTITY }),
+      ...(Array.isArray(item.addOns) ? { addOns } : {}),
+      ...(typeof item.packaging === 'string' ? { packaging: item.packaging.trim().slice(0, 120) } : {}),
+      ...(typeof item.packagingColor === 'string' ? { packagingColor: item.packagingColor.trim().slice(0, 80) } : {}),
+      ...(typeof item.giftMessage === 'string' ? { giftMessage: item.giftMessage.trim().slice(0, 500) } : {}),
+    }
   })
   return {
     items,
@@ -103,10 +111,12 @@ function discountAmount(discount, items, products, subtotal, couponCode, now) {
 
 export function calculateOrder(input, products, delivery, paymentMethods, discounts = {}) {
   const normalized = normalizeOrderInput(input)
-  const resolvedItems = normalized.items.map(({ productId, quantity }) => {
+  const resolvedItems = normalized.items.map(({ productId, quantity, addOns, packaging, packagingColor, giftMessage }) => {
     const product = products?.[productId]
     if (!productIsPublished(product) || !Number.isInteger(product.price) || product.price < 0) throw new Error('PRODUCT_UNAVAILABLE')
     if (Number.isInteger(product.stock) && product.stock < quantity) throw new Error('INSUFFICIENT_STOCK')
+    const defaultAddOns = Array.isArray(product.addOns) ? product.addOns.filter((item) => typeof item === 'string') : []
+    const selectedAddOns = Array.isArray(addOns) ? addOns.filter((item) => defaultAddOns.includes(item)) : defaultAddOns
     return {
       productId,
       name: text(product.name, 'product_name', 200),
@@ -114,8 +124,10 @@ export function calculateOrder(input, products, delivery, paymentMethods, discou
       quantity,
       unitPrice: product.price,
       image: typeof product.image === 'string' ? product.image : Array.isArray(product.imageUrls) && typeof product.imageUrls[0] === 'string' ? product.imageUrls[0] : '',
-      packaging: typeof product.packaging === 'string' ? product.packaging : '',
-      addOns: Array.isArray(product.addOns) ? product.addOns.filter((item) => typeof item === 'string') : [],
+      packaging: packaging || (typeof product.packaging === 'string' ? product.packaging : ''),
+      ...(packagingColor ? { packagingColor } : {}),
+      addOns: selectedAddOns,
+      ...(giftMessage ? { giftMessage } : {}),
       inventoryRecipe: normalizeRecipe(product.inventoryRecipe || product.recipe),
       lineTotal: product.price * quantity,
     }
