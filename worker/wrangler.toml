@@ -1,0 +1,15 @@
+name = "alasas-floor-image-upload"
+main = "src/index.js"
+compatibility_date = "2026-10-14"
+
+[vars]
+FIREBASE_PROJECT_ID = "floor-232bc"
+FIREBASE_DATABASE_URL = "https://floor-232bc-default-rtdb.europe-west1.firebasedatabase.app"
+GITHUB_OWNER = "NAJF8"
+GITHUB_REPO = "floor"
+GITHUB_BRANCH = "main"
+PUBLIC_BASE_URL = "https://najf8.github.io/floor"
+ALLOWED_ORIGINS = "https://najf8.github.io,http://localhost:5173,http://127.0.0.1:5173"
+
+# Set with: npx wrangler secret put GITHUB_TOKEN
+# Never put the token in this file or in the frontend.
