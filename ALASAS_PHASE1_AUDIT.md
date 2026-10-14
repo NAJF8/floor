@@ -13,9 +13,9 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    now ends at `d927309` after the verified local integration changes.
+    now ends at `deca1ea` after the verified local integration changes.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `8d7dcee`, with a clean
+  - The isolated implementation branch now ends at `bd48526`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -187,6 +187,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - Admin Orders displays transfer references when present and exposes the
   approval message only after payment is confirmed; the message is a user-
   initiated WhatsApp link, not an automatic notification.
+- Admin Orders now renders `PAYMENT_CONFIRMED` and `APPROVED` as read-only
+  dedicated states, leaving their transitions to `confirmOrderPayment` and
+  `approveOrder`; the generic status selector excludes those values. The Admin
+  build passed; authenticated order-state runtime remains unverified.
 - Latest synthetic approval readback: order total `40,000`, payment
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
@@ -242,6 +246,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
+| Admin order status controls | BUILD PASS; runtime NOT VERIFIED | Dedicated payment-confirmation and approval states are not sent through generic status writes; no live Admin acceptance |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
