@@ -14,8 +14,8 @@
     "shops": {
       "$shopId": {
         "products": {
-          ".read": true,
-          ".write": "auth != null && auth.token.firebase.sign_in_provider == 'google.com' && auth.token.email_verified == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN'"
+          ".read": "query.orderByChild == 'status' && query.equalTo == 'PUBLISHED'",
+          ".write": false
         },
         "public": {
           ".read": true,

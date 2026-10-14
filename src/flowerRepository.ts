@@ -1,4 +1,4 @@
-import { onValue, ref, type Unsubscribe } from 'firebase/database'
+import { equalTo, onValue, orderByChild, query, ref, type Unsubscribe } from 'firebase/database'
 import { firebaseDatabase } from './firebase'
 
 export type FlowerProductRecord = {
@@ -63,7 +63,8 @@ export function subscribeToShopProducts(
     throw new Error('Invalid shop ID')
   }
 
-  return onValue(ref(firebaseDatabase, `shops/${shopId}/products`), snapshot => {
+  const publishedProducts = query(ref(firebaseDatabase, `shops/${shopId}/products`), orderByChild('status'), equalTo('PUBLISHED'))
+  return onValue(publishedProducts, snapshot => {
     const value: unknown = snapshot.val()
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       onProducts([])

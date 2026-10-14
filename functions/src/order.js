@@ -54,7 +54,7 @@ export function normalizeOrderInput(input) {
 }
 
 function productIsPublished(product) {
-  return product && typeof product === 'object' && !Array.isArray(product) && product.active !== false && product.status !== 'ARCHIVED' && product.status !== 'HIDDEN' && product.status !== 'DRAFT' && product.status !== 'UNAVAILABLE'
+  return product && typeof product === 'object' && !Array.isArray(product) && product.active !== false && String(product.status || '').toUpperCase() === 'PUBLISHED'
 }
 
 function normalizeRecipe(recipe) {

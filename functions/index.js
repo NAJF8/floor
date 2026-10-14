@@ -63,6 +63,7 @@ function adminReadPolicy(path) {
   const prefix = `shops/${SHOP_ID}/`
   if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..') || path.includes('//')) throw new HttpsError('invalid-argument', 'Invalid administrative path.')
   const suffix = path.slice(prefix.length)
+  if (suffix === 'products' || suffix.startsWith('products/')) return { permission: 'products', minimumRole: 'EMPLOYEE' }
   if (suffix === 'private/orders' || suffix.startsWith('private/orders/')) return { permission: 'orders', minimumRole: 'EMPLOYEE' }
   if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'EMPLOYEE' }
   if (suffix === 'private/customers' || suffix.startsWith('private/customers/')) return { permission: 'customers', minimumRole: 'MANAGER' }
