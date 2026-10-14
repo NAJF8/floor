@@ -15,7 +15,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
     now ends at `d927309` after the verified local integration changes.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `39db90a`, with a clean
+  - The isolated implementation branch now ends at `8d7dcee`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -154,6 +154,10 @@ Production Firebase data, and it does not push or deploy either repository.
   store name/logo, announcement, and temporary order closure, with explicit
   fallbacks when fields are absent. The Customer build passed; authenticated
   live reflection remains unverified.
+- Admin document settings now serialize Boolean fields as actual booleans
+  rather than strings; `enabled`, `acceptingOrders`, and `temporaryClosed` are
+  exposed as explicit controls. This closes the configuration-type mismatch;
+  authenticated runtime readback remains unverified.
 - Both web clients now support an explicit local-only
   `VITE_USE_FIREBASE_EMULATORS=true` switch for Auth/RTDB/Functions testing;
   the default build keeps the existing Firebase project configuration.
