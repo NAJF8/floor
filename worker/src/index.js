@@ -3,8 +3,10 @@ const ALLOWED_TYPES = new Map([
   ['image/jpeg', { extension: 'jpg', magic: bytes => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff }],
   ['image/png', { extension: 'png', magic: bytes => bytes.length >= 8 && bytes.slice(0, 8).every((byte, index) => byte === [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a][index]) }],
   ['image/webp', { extension: 'webp', magic: bytes => new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP' }],
+  ['video/mp4', { extension: 'mp4', magic: bytes => bytes.length >= 12 && new TextDecoder().decode(bytes.slice(4, 8)) === 'ftyp' }],
+  ['video/webm', { extension: 'webm', magic: bytes => bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3 }],
 ])
-const ASSET_TYPES = new Set(['logo', 'favicon', 'cover', 'banner', 'product', 'category', 'occasion', 'product-extra'])
+const ASSET_TYPES = new Set(['logo', 'favicon', 'cover', 'banner', 'hero-media', 'hero-poster', 'product', 'category', 'occasion', 'product-extra'])
 const ROLE_ORDER = { VIEWER: 0, EMPLOYEE: 1, MANAGER: 2, ADMIN: 3, SUPER_ADMIN: 4 }
 let certificateCache
 
@@ -14,6 +16,16 @@ class UploadFailure extends Error {
     this.code = code
     this.status = status
   }
+}
+
+export async function validateUploadFile(file) {
+  if (!(file instanceof File)) return { ok: false, error: 'FILE_VALIDATION_FAILED' }
+  if (file.size <= 0 || file.size > MAX_BYTES) return { ok: false, error: 'FILE_TOO_LARGE' }
+  const metadata = ALLOWED_TYPES.get(file.type)
+  if (!metadata) return { ok: false, error: 'FILE_VALIDATION_FAILED' }
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
+  if (!metadata.magic(head)) return { ok: false, error: 'FILE_VALIDATION_FAILED' }
+  return { ok: true, metadata }
 }
 
 function json(value, status = 200, origin = '') {
@@ -145,7 +157,7 @@ function randomSegment() {
   return crypto.randomUUID().replace(/-/g, '')
 }
 
-async function uploadToGitHub(file, path, env) {
+export async function uploadToGitHub(file, path, env) {
   if (!env.GITHUB_TOKEN) throw new UploadFailure('MISSING_GITHUB_SECRET', 503)
   const bytes = new Uint8Array(await file.arrayBuffer())
   let binary = ''
@@ -159,7 +171,18 @@ async function uploadToGitHub(file, path, env) {
   }
   let result
   try { result = await response.json() } catch { throw new UploadFailure('RESPONSE_PARSING_FAILED', 502) }
-  return typeof result.commit?.sha === 'string' ? result.commit.sha : ''
+  if (typeof result.commit?.sha !== 'string' || typeof result.content?.path !== 'string' || Number(result.content?.size) !== bytes.length) throw new UploadFailure('GITHUB_API_ERROR', 502)
+  return { commitSha: result.commit.sha, downloadUrl: typeof result.content.download_url === 'string' ? result.content.download_url : '' }
+}
+
+async function verifyPublicUrl(url) {
+  if (!url) return false
+  try {
+    const response = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-15' } })
+    return response.ok || response.status === 206
+  } catch {
+    return false
+  }
 }
 
 export async function handleUpload(request, env) {
@@ -179,15 +202,17 @@ export async function handleUpload(request, env) {
     const assetType = safeSegment(form.get('assetType'))
     const recordId = safeSegment(form.get('recordId'))
     if (!(file instanceof File) || !ASSET_TYPES.has(assetType)) return json({ error: 'FILE_VALIDATION_FAILED' }, 400, origin)
-    if (file.size <= 0 || file.size > MAX_BYTES) return json({ error: 'FILE_TOO_LARGE' }, 413, origin)
-    const metadata = ALLOWED_TYPES.get(file.type)
-    if (!metadata) return json({ error: 'FILE_VALIDATION_FAILED' }, 415, origin)
-    const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
-    if (!metadata.magic(head)) return json({ error: 'FILE_VALIDATION_FAILED' }, 415, origin)
+    const validation = await validateUploadFile(file)
+    if (!validation.ok) return json({ error: validation.error }, validation.error === 'FILE_TOO_LARGE' ? 413 : 415, origin)
+    const metadata = validation.metadata
     const suffix = recordId ? `/${recordId}` : ''
     const path = `public/uploads/floor-232bc/${assetType}${suffix}/${Date.now()}-${randomSegment()}.${metadata.extension}`
-    const commitSha = await uploadToGitHub(file, path, env)
-    return json({ url: `${String(env.PUBLIC_BASE_URL).replace(/\/$/, '')}/${path.replace(/^public\//, '')}`, path, commitSha, contentType: file.type, size: file.size }, 201, origin)
+    const github = await uploadToGitHub(file, path, env)
+    const fallbackUrl = `${String(env.PUBLIC_BASE_URL).replace(/\/$/, '')}/${path.replace(/^public\//, '')}`
+    const url = github.downloadUrl || fallbackUrl
+    const publicUrlVerified = env.VERIFY_PUBLIC_URL === 'true' ? await verifyPublicUrl(url) : false
+    if (env.VERIFY_PUBLIC_URL === 'true' && !publicUrlVerified) throw new UploadFailure('PUBLIC_URL_NOT_VERIFIED', 502)
+    return json({ url, path, commitSha: github.commitSha, contentType: file.type, size: file.size, publicUrlVerified }, 201, origin)
   } catch (error) {
     const code = error instanceof UploadFailure ? error.code : 'NETWORK_ERROR'
     const status = error instanceof UploadFailure ? error.status : 502

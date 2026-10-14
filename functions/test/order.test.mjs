@@ -77,6 +77,10 @@ test('requires an explicit published state for checkout', () => {
   assert.throws(() => calculateOrder(input, { red: { name: 'Unreviewed bouquet', price: 40000, active: true, stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
 })
 
+test('rejects the current DEMO records while they remain draft and inactive', () => {
+  assert.throws(() => calculateOrder(input, { red: { name: 'Demo bouquet', price: 40000, active: false, status: 'DRAFT', demoTag: 'ALASAS_DEMO_V1', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
+})
+
 test('enforces the order status state machine', () => {
   assert.equal(canTransitionOrderStatus('NEW', 'PAYMENT_REVIEW'), true)
   assert.equal(canTransitionOrderStatus('PAYMENT_CONFIRMED', 'APPROVED'), true)

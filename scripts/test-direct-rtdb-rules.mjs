@@ -3,7 +3,6 @@ import { getApps, initializeApp, deleteApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { connectDatabaseEmulator, equalTo, get, getDatabase, orderByChild, query, ref, runTransaction, set, update } from 'firebase/database'
 import { getApps as getAdminApps, initializeApp as initializeAdminApp } from 'firebase-admin/app'
-import { getAuth as getAdminAuth } from 'firebase-admin/auth'
 import { getDatabase as getAdminDatabase } from 'firebase-admin/database'
 
 const projectId = 'floor-232bc'
@@ -12,7 +11,6 @@ const databaseUrl = `http://127.0.0.1:9000?ns=${projectId}-default-rtdb`
 const runId = Date.now().toString(36)
 const adminApp = getAdminApps()[0] || initializeAdminApp({ projectId, databaseURL: databaseUrl })
 const adminDb = getAdminDatabase(adminApp)
-const adminAuth = getAdminAuth(adminApp)
 
 const roles = {
   admin: { role: 'ADMIN', permissions: { products: true, catalog: true, settings: true, inventory: true } },
@@ -23,8 +21,10 @@ const roles = {
 
 async function createIdentity(label) {
   const email = `${label}-${runId}@emulator.invalid`
-  const user = await adminAuth.createUser({ email, password: 'StrongPass123!', emailVerified: true, displayName: label })
-  return { ...user, email }
+  const response = await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'StrongPass123!', returnSecureToken: true }) })
+  const body = await response.json()
+  if (!response.ok || !body.localId) throw new Error(`Auth Emulator signup failed (${response.status})`)
+  return { uid: body.localId, email }
 }
 
 async function clientFor(identity) {
@@ -61,6 +61,9 @@ const seed = {
         hidden: { name: 'Seed hidden', category: 'flowers', price: 20000, status: 'HIDDEN', active: true },
       },
       public: {
+        demoProducts: {
+          demoProduct: { name: 'Demo projection', category: 'demo', price: 10000, status: 'DEMO', active: false, orderable: false, demoTag: 'ALASAS_DEMO_V1', image: 'https://images.example/demo.jpg' },
+        },
         categories: {
           published: { name: 'Published category', status: 'PUBLISHED', visible: true, order: 1 },
           hidden: { name: 'Hidden category', status: 'HIDDEN', visible: false, order: 2 },
@@ -85,6 +88,7 @@ const unauthorized = await clientFor(identities.unauthorized)
 const productsRef = `shops/${shopId}/products`
 const categoriesRef = `shops/${shopId}/public/categories`
 const inventoryRef = `shops/${shopId}/private/inventory`
+const demoProductsRef = `shops/${shopId}/public/demoProducts`
 
 const publishedQuery = query(ref(anonymous.db, productsRef), orderByChild('status'), equalTo('PUBLISHED'))
 const customerProducts = await expectAllowed('customer reads published products', () => get(publishedQuery))
@@ -92,6 +96,10 @@ assert.deepEqual(Object.keys(customerProducts.val()), ['published'])
 await expectDenied('customer cannot read all products', () => get(ref(anonymous.db, productsRef)))
 const customerCategories = await expectAllowed('customer reads published categories', () => get(query(ref(anonymous.db, categoriesRef), orderByChild('status'), equalTo('PUBLISHED'))))
 assert.deepEqual(Object.keys(customerCategories.val()), ['published'])
+const customerDemoProducts = await expectAllowed('customer reads safe demo projection', () => get(ref(anonymous.db, demoProductsRef)))
+assert.deepEqual(Object.keys(customerDemoProducts.val()), ['demoProduct'])
+assert.equal(customerDemoProducts.val().demoProduct.demoTag, 'ALASAS_DEMO_V1')
+assert.equal(customerDemoProducts.val().demoProduct.orderable, false)
 await expectDenied('customer cannot read private orders', () => get(ref(anonymous.db, `shops/${shopId}/private/orders`)))
 
 await expectAllowed('admin reads products', () => get(ref(admin.db, productsRef)))
@@ -100,6 +108,8 @@ await expectDenied('unauthorized cannot read products', () => get(ref(unauthoriz
 await expectDenied('viewer cannot write products', () => update(ref(viewer.db, `${productsRef}/published`), { price: 11000 }))
 await expectDenied('employee cannot write products', () => update(ref(employee.db, `${productsRef}/published`), { price: 11000 }))
 await expectDenied('unauthorized cannot write products', () => update(ref(unauthorized.db, `${productsRef}/published`), { price: 11000 }))
+await expectDenied('viewer cannot write demo projection', () => update(ref(viewer.db, `${demoProductsRef}/demoProduct`), { price: 11000 }))
+await expectDenied('manager cannot write demo projection', () => update(ref(manager.db, `${demoProductsRef}/demoProduct`), { orderable: true }))
 
 await expectAllowed('manager creates category', () => set(ref(manager.db, `${categoriesRef}/managed`), { name: 'Managed category', status: 'PUBLISHED', visible: true, order: 3 }))
 await expectAllowed('manager creates product', () => set(ref(manager.db, `${productsRef}/managed`), { name: 'Managed flower', category: 'managed', price: 30000, status: 'PUBLISHED', active: true }))

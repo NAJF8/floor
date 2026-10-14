@@ -24,6 +24,9 @@ export type FlowerProductRecord = {
   active?: boolean
   status?: string
   stock?: number
+  demoTag?: string
+  orderable?: boolean
+  demo?: boolean
 }
 
 export type FlowerCategoryRecord = { id: string; name: string; description?: string; image?: string; order?: number; visible?: boolean; status?: string }
@@ -111,6 +114,32 @@ export function subscribeToShopProducts(
   }, error => onError(error))
 }
 
+/**
+ * Watch the deliberately public demo projection. This is separate from the
+ * private/admin product collection so a DRAFT product is never exposed just
+ * because a customer can read the catalog.
+ */
+export function subscribeToShopDemoProducts(
+  shopId: string,
+  onProducts: (products: FlowerProductRecord[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(shopId)) throw new Error('Invalid shop ID')
+  return onValue(ref(firebaseDatabase, `shops/${shopId}/public/demoProducts`), snapshot => {
+    const value: unknown = snapshot.val()
+    if (!value || typeof value !== 'object' || Array.isArray(value)) { onProducts([]); return }
+    const products: FlowerProductRecord[] = []
+    for (const [id, item] of Object.entries(value)) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue
+      const record = item as Record<string, unknown>
+      if (record.demoTag !== 'ALASAS_DEMO_V1' || typeof record.name !== 'string' || typeof record.category !== 'string' || typeof record.price !== 'number' || !Number.isFinite(record.price)) continue
+      if (['HIDDEN', 'ARCHIVED'].includes(String(record.status || '').toUpperCase())) continue
+      products.push({ id, name: record.name, nameEn: typeof record.nameEn === 'string' ? record.nameEn : undefined, price: record.price, category: record.category, image: typeof record.image === 'string' ? record.image : undefined, imageUrls: Array.isArray(record.imageUrls) ? record.imageUrls.filter((item): item is string => typeof item === 'string') : undefined, description: typeof record.description === 'string' ? record.description : undefined, badge: 'منتج تجريبي', stock: typeof record.stock === 'number' ? record.stock : undefined, status: 'DEMO', active: false, orderable: false, demoTag: 'ALASAS_DEMO_V1', demo: true })
+    }
+    onProducts(products)
+  }, onError)
+}
+
 export function subscribeToShopCategories(
   shopId: string,
   onCategories: (categories: FlowerCategoryRecord[]) => void,
@@ -172,7 +201,9 @@ export function subscribeToShopPublicConfig(
         delivery[province] = { enabled: record.enabled !== false, areas: normalizedAreas }
       }
     }
-    onConfig({ paymentMethods, delivery, settings: objectValue(value.settings), homepage: objectValue(value.homepage), aiAssistant: objectValue(value.aiAssistant) })
+    const aiAssistant = objectValue(value.aiAssistant)
+    if (typeof aiAssistant.packageOptions === 'string') aiAssistant.packageOptions = aiAssistant.packageOptions.split(',').map(item => item.trim()).filter(Boolean)
+    onConfig({ paymentMethods, delivery, settings: objectValue(value.settings), homepage: objectValue(value.homepage), aiAssistant })
   }
   const stops = ['paymentMethods', 'delivery', 'settings', 'homepage', 'aiAssistant'].map(key => onValue(ref(firebaseDatabase, `shops/${shopId}/public/${key}`), snapshot => { const next = snapshot.val(); value = { ...value, [key]: next && typeof next === 'object' && !Array.isArray(next) ? next as Record<string, unknown> : {} }; emit() }, onError))
   return () => stops.forEach(stop => stop())

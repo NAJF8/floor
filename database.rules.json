@@ -36,6 +36,13 @@
         "public": {
           ".read": false,
           ".write": false,
+          "demoProducts": {
+            ".read": true,
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN'",
+            "$productId": {
+              ".validate": "newData.hasChildren(['name', 'category', 'price', 'demoTag']) && newData.child('name').isString() && newData.child('category').isString() && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('demoTag').val() == 'ALASAS_DEMO_V1' && (!newData.hasChild('status') || newData.child('status').val() == 'DEMO') && (!newData.hasChild('active') || newData.child('active').val() == false) && (!newData.hasChild('orderable') || newData.child('orderable').val() == false)"
+            }
+          },
           "categories": {
             ".indexOn": ["status", "visible"],
             ".read": "(query.orderByChild == 'status' && query.equalTo == 'PUBLISHED') || (query.orderByChild == 'visible' && query.equalTo == true) || (auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false))",
