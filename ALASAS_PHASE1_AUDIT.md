@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `ae50746`; the latest audit commit is
+    implementation source ends at `6a3a5a2`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `2c3ff48`, with a clean
@@ -215,6 +215,10 @@ Production Firebase data, and it does not push or deploy either repository.
   dedicated states, leaving their transitions to `confirmOrderPayment` and
   `approveOrder`; the generic status selector excludes those values. The Admin
   build passed; authenticated order-state runtime remains unverified.
+- The Functions layer now enforces an explicit order-state transition map and
+  rejects unsafe jumps such as `NEW -> DELIVERED`; payment confirmation moves
+  eligible orders to `PAYMENT_CONFIRMED` before approval. The transition unit
+  tests passed; callable runtime and live Admin acceptance remain unverified.
 - Latest synthetic approval readback: order total `40,000`, payment
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
@@ -272,6 +276,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
 | Admin order status controls | BUILD PASS; runtime NOT VERIFIED | Dedicated payment-confirmation and approval states are not sent through generic status writes; no live Admin acceptance |
+| Order status state machine | UNIT PASS; callable runtime NOT VERIFIED | Explicit transition map rejects unsafe jumps and keeps approval/payment actions dedicated |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
