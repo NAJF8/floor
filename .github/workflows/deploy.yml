@@ -45,6 +45,9 @@ jobs:
       - name: Prepare direct admin route
         run: mkdir -p dist/admin && cp -R admin/dist/. dist/admin/
 
+      - name: Enable GitHub Pages SPA deep links
+        run: cp dist/index.html dist/404.html && cp admin/dist/index.html dist/admin/404.html
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
