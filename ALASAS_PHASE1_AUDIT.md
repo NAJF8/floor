@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    now ends at `1c8f333`; recent commits add local acceptance tooling,
+    now ends at `63c3d23`; recent commits add local acceptance tooling,
     configuration hygiene, delivery/payment UI boundary checks, and audit-only
     updates. The repeatable Auth/Database/Functions harness remains in the
     same isolated branch.
@@ -251,6 +251,12 @@ Production Firebase data, and it does not push or deploy either repository.
   المفضلة` after removal, and `/favorites` showed one saved synthetic product.
   This is local browser evidence only: no Production write, deploy, or live
   authenticated checkout was attempted.
+- Checkout now also renders a local review card listing the selected product,
+  quantity, and pre-delivery subtotal before submission. CUA read back one
+  synthetic product at `15,000` IQD, the subtotal at `15,000` IQD, the enabled
+  University delivery at `4,000` IQD, and no disabled `ClosedArea`; the card
+  explicitly states that final discount, stock, and server pricing are checked
+  again on submission.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
@@ -372,7 +378,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, readback, retry idempotency, and owner-only access; Production callable is not deployed |
-| Customer cart/checkout wiring | PASS (local config/filter browser); callable Production NOT VERIFIED | CUA read back enabled delivery/payment configuration and omitted disabled delivery; no deployed callable or authenticated live checkout |
+| Customer cart/checkout wiring | PASS (local config/filter/review browser); callable Production NOT VERIFIED | CUA read back product/quantity/subtotal review, enabled delivery/payment configuration, and omitted disabled delivery; no deployed callable or authenticated live checkout |
 | Coupon pricing and usage | PASS (unit + emulator) | 11 server pricing/state tests; emulator coupon and automatic-promotion totals, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
