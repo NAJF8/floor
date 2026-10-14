@@ -13,7 +13,8 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    now ends at `c3a68f6`; recent commits add local acceptance tooling,
+    implementation commits are covered through `c3a68f6`; subsequent commits
+    update this audit and its master-prompt status matrix,
     configuration hygiene, delivery/payment UI boundary checks, and audit-only
     updates. The repeatable Auth/Database/Functions harness remains in the
     same isolated branch.
