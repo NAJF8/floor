@@ -110,7 +110,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Home onAdd={(id) => { cart.add(id); notify('تمت إضافة الباقة إلى السلة') }} />} />
       <Route path="/shop" element={<Shop onAdd={(id) => { cart.add(id); notify('تمت إضافة المنتج إلى السلة') }} />} />
-      <Route path="/product/:slug" element={<ProductPage onAdd={(id, quantity) => { cart.add(id, quantity); notify('تمت إضافة المنتج إلى السلة') }} />} />
+      <Route path="/product/:slug" element={<ProductPage onAdd={(id, quantity, options) => { cart.add(id, quantity, options); notify('تمت إضافة المنتج إلى السلة') }} />} />
       <Route path="/design-your-bouquet" element={<Designer onAdd={() => notify('التصميم التوضيحي لا يُضاف كمنتج حتى يتم اعتماده من المتجر')} />} />
       <Route path="/ai-bouquet-designer" element={<AIDesignerConnected onAdd={() => notify('المعاينة التوضيحية لا تُضاف كمنتج حتى يتم اعتمادها من المتجر')} />} />
       <Route path="/cart" element={<Cart cart={cart} />} />
