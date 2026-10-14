@@ -31,6 +31,14 @@ test('rejects stale client price because item price is read from catalog', () =>
   assert.equal(result.total, 85000)
 })
 
+test('enforces store closure and payment province restrictions on the server', () => {
+  const products = { red: { name: 'Red bouquet', price: 40000, active: true, status: 'PUBLISHED', stock: 3 } }
+  const delivery = { Najaf: { areas: { University: { price: 5000 } } } }
+  const payment = { cash: { name: 'Cash', type: 'CASH', enabled: true, provinces: ['Baghdad'] } }
+  assert.throws(() => calculateOrder(input, products, delivery, payment), /PAYMENT_METHOD_UNAVAILABLE/)
+  assert.throws(() => calculateOrder({ ...input, province: 'Baghdad', district: 'University' }, products, { Baghdad: { areas: { University: { price: 5000 } } } }, payment, {}, { acceptingOrders: false }), /ORDERS_CLOSED/)
+})
+
 test('applies one eligible percentage coupon from server data', () => {
   const result = calculateOrder({ ...input, couponCode: 'SPRING10' }, { red: { name: 'Red bouquet', category: 'roses', price: 40000, active: true, status: 'PUBLISHED', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }, { spring: { name: 'Spring', code: 'SPRING10', scope: 'ALL', discountType: 'PERCENT', value: 10, active: true } })
   assert.equal(result.subtotal, 80000)

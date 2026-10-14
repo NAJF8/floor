@@ -131,8 +131,9 @@ function discountAmount(discount, items, products, subtotal, couponCode, now) {
   return amount > 0 ? { id: discount.id, name: typeof discount.name === 'string' ? discount.name : '', code, amount } : null
 }
 
-export function calculateOrder(input, products, delivery, paymentMethods, discounts = {}) {
+export function calculateOrder(input, products, delivery, paymentMethods, discounts = {}, settings = {}) {
   const normalized = normalizeOrderInput(input)
+  if (settings?.acceptingOrders === false || settings?.temporaryClosed === true) throw new Error('ORDERS_CLOSED')
   const resolvedItems = normalized.items.map(({ productId, quantity, addOns, packaging, packagingColor, giftMessage }) => {
     const product = products?.[productId]
     if (!productIsPublished(product) || !Number.isInteger(product.price) || product.price < 0) throw new Error('PRODUCT_UNAVAILABLE')
@@ -156,6 +157,7 @@ export function calculateOrder(input, products, delivery, paymentMethods, discou
   })
   const paymentMethod = paymentMethods?.[normalized.paymentMethodId]
   if (!paymentMethod || paymentMethod.enabled !== true) throw new Error('PAYMENT_METHOD_UNAVAILABLE')
+  if (Array.isArray(paymentMethod.provinces) && paymentMethod.provinces.length > 0 && !paymentMethod.provinces.includes(normalized.province)) throw new Error('PAYMENT_METHOD_UNAVAILABLE')
   const deliveryArea = findDeliveryArea(delivery, normalized.province, normalized.district)
   if (!deliveryArea) throw new Error('DELIVERY_AREA_UNCONFIGURED')
   const subtotal = resolvedItems.reduce((sum, item) => sum + item.lineTotal, 0)

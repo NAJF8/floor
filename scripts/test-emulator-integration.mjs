@@ -100,7 +100,7 @@ try {
   await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { catalog: true } })
   await root.set({
     products: { rose: { name: 'Synthetic rose', price: 40000, category: 'roses', status: 'PUBLISHED', active: true, stock: 2, inventoryRecipe: { wrap: 1 } } },
-    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: { synthetic: { name: 'Synthetic ten percent', code: 'SYN10', scope: 'ALL', discountType: 'PERCENT', value: 10, maxUses: 1, active: true }, automatic: { name: 'Synthetic automatic roses offer', code: '', scope: 'CATEGORY', categoryId: 'roses', discountType: 'FIXED', value: 3000, maxUses: 1, active: true } } },
+    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, restricted: { name: 'Baghdad-only cash', type: 'CASH', enabled: true, provinces: ['Baghdad'] }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: { synthetic: { name: 'Synthetic ten percent', code: 'SYN10', scope: 'ALL', discountType: 'PERCENT', value: 10, maxUses: 1, active: true }, automatic: { name: 'Synthetic automatic roses offer', code: '', scope: 'CATEGORY', categoryId: 'roses', discountType: 'FIXED', value: 3000, maxUses: 1, active: true } } },
     private: { inventory: { wrap: { name: 'Synthetic wrap', quantity: 3, active: true, status: 'ACTIVE' } } },
   })
 
@@ -153,6 +153,10 @@ try {
   const input = { items: [{ productId: 'rose', quantity: 1, packaging: 'Premium wrap', addOns: ['Ribbon'], giftMessage: 'Local test' }], customerName: 'Synthetic Customer', phone: '07700000000', recipientName: 'Synthetic Recipient', recipientPhone: '07700000001', province: 'Najaf', district: 'University', address: 'Local emulator only', deliveryAt: '2026-10-20T12:00', paymentMethodId: 'cash', idempotencyKey: 'local-integration-order-1' }
   await expectFunctionError('createOrder', customer.token, { ...input, idempotencyKey: '../orders' }, 'FAILED_PRECONDITION')
   await expectFunctionError('createOrder', customer.token, { ...input, district: 'ClosedArea', idempotencyKey: 'local-integration-disabled-delivery' }, 'FAILED_PRECONDITION')
+  await expectFunctionError('createOrder', customer.token, { ...input, paymentMethodId: 'restricted', idempotencyKey: 'local-integration-unsupported-payment' }, 'FAILED_PRECONDITION')
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/public/settings`, value: { acceptingOrders: false } })
+  await expectFunctionError('createOrder', customer.token, { ...input, idempotencyKey: 'local-integration-closed-store' }, 'FAILED_PRECONDITION')
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/public/settings`, value: { acceptingOrders: true } })
   const automaticPromotionOrder = await callFunction('createOrder', customer.token, { ...input, idempotencyKey: 'local-integration-automatic-promotion' })
   assert.equal(automaticPromotionOrder.total, 42000)
   const couponOrder = await callFunction('createOrder', customer.token, { ...input, couponCode: 'SYN10', idempotencyKey: 'local-integration-coupon' })
