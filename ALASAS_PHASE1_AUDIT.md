@@ -201,7 +201,9 @@ Production Firebase data, and it does not push or deploy either repository.
   repeatable Auth/Database/Functions harness then used the Firebase Web SDK
   with a signed-in synthetic customer and received `PERMISSION_DENIED` for
   direct writes to both `private` and `users`, while callable/Admin SDK paths
-  continued to pass. The harness refuses non-local hosts; this remains local
+  continued to pass. The same client could read its own `users/{uid}` node,
+  while another user's node and `private/orders` returned
+  `PERMISSION_DENIED`. The harness refuses non-local hosts; this remains local
   evidence, not Production Rules parity.
 - A CUA-rendered local Customer page showed the Arabic RTL layout, navigation,
   hero, category cards, product cards, and no blank screen. The isolated
