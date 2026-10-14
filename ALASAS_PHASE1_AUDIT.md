@@ -25,6 +25,17 @@ Production Firebase data, and it does not push or deploy either repository.
   worktree both completed successfully.
 - The admin build completed successfully. The customer dependency audit reports
   15 vulnerabilities (5 moderate, 10 high); no automatic upgrade was applied.
+- Read-only external deployment checks on 2026-10-14 returned HTTP `200` for
+  both published URLs. The customer page rendered its existing demo catalog
+  and the Admin page rendered its existing authenticated legacy dashboard;
+  neither page exposed the current local Emulator-only integration. The live
+  asset names were customer `index-B7eFiwr3.js` / `index-D3wT_NBa.css` and
+  Admin `index-DqcsL6i3.js` / `index-Qm4q6h6Z.css`, so the exact relationship
+  to the isolated local commits remains unproven.
+- Public GitHub Actions readback showed recent successful runs for both
+  repositories (`NAJF8/floor` head `46dab86`, `NAJF8/floor-admin` head
+  `864b0d7`). This proves those workflows completed successfully, not that the
+  current isolated branches or Firebase Functions were deployed.
 
 ## Firebase read-only evidence
 
@@ -373,7 +384,9 @@ Production Firebase data, and it does not push or deploy either repository.
    any Production write. The idempotent preview script is present, but this
    machine has no approved Admin credential, so the live preview was not run.
 5. Product/category seed data, customer checkout, payment readback, and
-   physical/live deployment acceptance remain unverified.
+   current-commit live deployment acceptance remain unverified. The published
+   URLs themselves are reachable and render, but they still show the existing
+   demo/legacy surfaces rather than the isolated integration.
 
 ## Status summary
 
@@ -422,8 +435,8 @@ Production Firebase data, and it does not push or deploy either repository.
 | --- | --- | --- |
 | CUSTOMER_BUILD | PASS | Customer isolated build passed |
 | ADMIN_BUILD | PASS | Admin build passed |
-| CUSTOMER_DEPLOY | NOT VERIFIED | No deployment attempted |
-| ADMIN_DEPLOY | NOT VERIFIED | No deployment attempted |
+| CUSTOMER_DEPLOY | PASS (read-only availability); current SHA NOT VERIFIED | Published URL returned HTTP 200 and rendered the existing storefront; exact local commit/backend deployment was not proven |
+| ADMIN_DEPLOY | PASS (read-only availability); current SHA NOT VERIFIED | Published URL returned HTTP 200 and rendered the existing Admin surface; exact local commit/backend deployment was not proven |
 | FIREBASE_CONNECTION | PASS | Read-only project/database access |
 | RTDB_RULES | NOT VERIFIED | Local Rules Emulator passed; Production parity not proven |
 | SUPER_ADMIN_ACCOUNTS | PASS | Both supplied UIDs read back unchanged and immutable |
