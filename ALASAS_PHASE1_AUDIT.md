@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    now ends at `6e310a7`; recent commits add local acceptance tooling,
+    now ends at `0e80513`; recent commits add local acceptance tooling,
     configuration hygiene, delivery/payment UI boundary checks, and audit-only
     updates. The repeatable Auth/Database/Functions harness remains in the
     same isolated branch.
@@ -235,16 +235,20 @@ Production Firebase data, and it does not push or deploy either repository.
   while another user's node and `private/orders` returned
   `PERMISSION_DENIED`. The harness refuses non-local hosts; this remains local
   evidence, not Production Rules parity.
-- A CUA-rendered local Customer page showed the Arabic RTL layout, navigation,
-  hero, category cards, product cards, and no blank screen. The isolated
-  browser could not reach RTDB Emulator port `9000`, so it displayed the
-  intentional catalog fallback; live catalog rendering remains NOT VERIFIED.
-  A fresh local flow reached `/shop` and rendered the demo product cards after
-  clicking `تسوّق الباقات`; the Admin local flow reached the Google Login page.
-  Neither flow had an application console error. The Customer console showed
-  only React Router future warnings and the expected live-RTDB missing-index
-  warning, which further confirms that local Rules/index changes are not
-  deployed to Production.
+- An earlier CUA-rendered local Customer page could not reach RTDB Emulator
+  port `9000` and therefore showed the intentional catalog fallback. A fresh,
+  repeatable local browser run now starts the Auth/Database/Functions Emulator,
+  seeds synthetic-only data, and reaches `/shop`, `/product/browserRose`,
+  `/checkout`, and `/favorites` through the actual Customer app. The rendered
+  store name, homepage text, published category, published product, two-image
+  gallery, and enabled cash payment were read from the Emulator-backed UI;
+  the disabled `ClosedArea` was absent from the delivery selector and the
+  draft product was absent from `/shop`. On the mobile-width product page the
+  favorite button was initially hidden by a narrow-screen CSS rule; that rule
+  was corrected, and CUA read back `إزالة من المفضلة`, then `إضافة إلى
+  المفضلة` after removal, and `/favorites` showed one saved synthetic product.
+  This is local browser evidence only: no Production write, deploy, or live
+  authenticated checkout was attempted.
 - The admin checkout adds a callable-backed order workflow: payment confirmation,
   approval, status changes, and an inventory lock with one multi-location update.
   Generic Admin CRUD writes now go through an allowlisted `adminWrite` callable
@@ -350,7 +354,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Firebase connection | PASS (read-only) | Firebase CLI project/data reads |
 | RTDB Rules parity | NOT VERIFIED | Local anonymous smoke plus authenticated Firebase Web SDK denial checks passed; Production deployment/parity remains unproven |
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
-| Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
+| Live customer render | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered the isolated worktree against synthetic RTDB data; new worktree was not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | PASS (local callable subset); Production NOT VERIFIED | Synthetic Admin create/read/update, two-image and price readback, category archive, and product-preservation readback passed; full browser acceptance and Production write/readback remain unverified |
 | Published product exposure | PASS (local Rules Emulator); Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product/config writes are disabled, and Admin reads through role-checked callable; local smoke returned 401 unfiltered and only the published fixture, rules were not deployed |
@@ -362,12 +366,12 @@ Production Firebase data, and it does not push or deploy either repository.
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, readback, retry idempotency, and owner-only access; Production callable is not deployed |
-| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Product IDs/config, route-forwarded and persisted cart options, callable sanitization, and post-order WhatsApp/cart snapshot are wired; no deployed callable or authenticated browser acceptance |
+| Customer cart/checkout wiring | PASS (local config/filter browser); callable Production NOT VERIFIED | CUA read back enabled delivery/payment configuration and omitted disabled delivery; no deployed callable or authenticated live checkout |
 | Coupon pricing and usage | PASS (unit + emulator) | 8 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Destructive admin deletes | PASS (local code/test boundary) | Callable rejects `delete`; category and collection UI use archive/disable updates; no live mutation acceptance |
-| Favorites | PASS (emulator only) | Local visitor storage plus authenticated callable merge/readback; Google popup/live Production flow remains unverified |
+| Favorites | PASS (emulator + local browser) | Synthetic callable merge/readback plus CUA mobile detail toggle and `/favorites` readback; Google popup/live Production flow remains unverified |
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
