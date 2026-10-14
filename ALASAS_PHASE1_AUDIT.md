@@ -13,9 +13,10 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source changes end at `a91ccfc`; subsequent commits on this
-    branch add local acceptance tooling, configuration hygiene, and audit-only
-    updates. The repeatable Auth/Database/Functions harness is `0a75ef2`.
+    now ends at `d2b34e4`; recent commits add local acceptance tooling,
+    configuration hygiene, delivery/payment UI boundary checks, and audit-only
+    updates. The repeatable Auth/Database/Functions harness remains in the
+    same isolated branch.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `43a2ee1`, with a clean
     worktree after the verified local changes.
