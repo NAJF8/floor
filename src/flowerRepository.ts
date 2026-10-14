@@ -106,19 +106,27 @@ export function subscribeToShopCategories(
   onCategories: (categories: FlowerCategoryRecord[]) => void,
   onError: (error: Error) => void,
 ): Unsubscribe {
-  return onValue(ref(firebaseDatabase, `shops/${shopId}/public/categories`), snapshot => {
-    const value: unknown = snapshot.val()
+  let byStatus: Record<string, unknown> = {}
+  let byVisibility: Record<string, unknown> = {}
+  let closed = false
+  const emit = () => {
+    const value = { ...byVisibility, ...byStatus }
     if (!value || typeof value !== 'object' || Array.isArray(value)) { onCategories([]); return }
     const categories: FlowerCategoryRecord[] = []
     for (const [id, item] of Object.entries(value)) {
       if (!item || typeof item !== 'object' || Array.isArray(item)) continue
       const record = item as Record<string, unknown>
       if (typeof record.name !== 'string' || record.visible === false || ['HIDDEN', 'DRAFT', 'ARCHIVED'].includes(String(record.status || '').toUpperCase())) continue
-      categories.push({ id, name: record.name, ...(typeof record.description === 'string' ? { description: record.description } : {}), ...(typeof record.image === 'string' ? { image: record.image } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}), visible: true })
+      categories.push({ id, name: record.name, ...(typeof record.description === 'string' ? { description: record.description } : {}), ...(typeof record.image === 'string' ? { image: record.image } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}), ...(typeof record.status === 'string' ? { status: record.status } : {}), visible: true })
     }
     categories.sort((a, b) => (a.order || 0) - (b.order || 0))
     onCategories(categories)
-  }, error => onError(error))
+  }
+  const statusQuery = query(ref(firebaseDatabase, `shops/${shopId}/public/categories`), orderByChild('status'), equalTo('PUBLISHED'))
+  const visibleQuery = query(ref(firebaseDatabase, `shops/${shopId}/public/categories`), orderByChild('visible'), equalTo(true))
+  const stopStatus = onValue(statusQuery, snapshot => { byStatus = snapshot.val() || {}; if (!closed) emit() }, onError)
+  const stopVisibility = onValue(visibleQuery, snapshot => { byVisibility = snapshot.val() || {}; if (!closed) emit() }, onError)
+  return () => { closed = true; stopStatus(); stopVisibility() }
 }
 
 export function subscribeToShopPublicConfig(
@@ -126,8 +134,9 @@ export function subscribeToShopPublicConfig(
   onConfig: (config: ShopPublicConfig) => void,
   onError: (error: Error) => void,
 ): Unsubscribe {
-  return onValue(ref(firebaseDatabase, `shops/${shopId}/public`), snapshot => {
-    const value = snapshot.val()
+  let value: Record<string, unknown> = {}
+  const emit = () => {
+    const objectValue = (candidate: unknown): Record<string, unknown> => candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? candidate as Record<string, unknown> : {}
     const paymentMethods: Record<string, PaymentMethodRecord> = {}
     const rawPaymentMethods = value?.paymentMethods
     if (rawPaymentMethods && typeof rawPaymentMethods === 'object' && !Array.isArray(rawPaymentMethods)) {
@@ -153,6 +162,8 @@ export function subscribeToShopPublicConfig(
         delivery[province] = { enabled: record.enabled !== false, areas: normalizedAreas }
       }
     }
-    onConfig({ paymentMethods, delivery, settings: value?.settings && typeof value.settings === 'object' && !Array.isArray(value.settings) ? value.settings : {}, homepage: value?.homepage && typeof value.homepage === 'object' && !Array.isArray(value.homepage) ? value.homepage : {}, aiAssistant: value?.aiAssistant && typeof value.aiAssistant === 'object' && !Array.isArray(value.aiAssistant) ? value.aiAssistant : {} })
-  }, error => onError(error))
+    onConfig({ paymentMethods, delivery, settings: objectValue(value.settings), homepage: objectValue(value.homepage), aiAssistant: objectValue(value.aiAssistant) })
+  }
+  const stops = ['paymentMethods', 'delivery', 'settings', 'homepage', 'aiAssistant'].map(key => onValue(ref(firebaseDatabase, `shops/${shopId}/public/${key}`), snapshot => { const next = snapshot.val(); value = { ...value, [key]: next && typeof next === 'object' && !Array.isArray(next) ? next as Record<string, unknown> : {} }; emit() }, onError))
+  return () => stops.forEach(stop => stop())
 }

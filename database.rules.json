@@ -15,16 +15,51 @@
       "$shopId": {
         "products": {
           ".indexOn": ["status"],
-          ".read": "query.orderByChild == 'status' && query.equalTo == 'PUBLISHED'",
-          ".write": false
-        },
-        "public": {
-          ".read": true,
-          ".write": false
+          ".read": "(query.orderByChild == 'status' && query.equalTo == 'PUBLISHED') || (auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('products').val() != false))",
+          ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('products').val() != false)",
+          "$productId": {
+            ".validate": "newData.hasChildren(['name', 'category', 'price', 'status']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 200 && newData.child('category').isString() && newData.child('category').val().length > 0 && newData.child('category').val().length <= 120 && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 1000000000 && newData.child('status').isString() && (newData.child('status').val() == 'PUBLISHED' || newData.child('status').val() == 'HIDDEN' || newData.child('status').val() == 'DRAFT' || newData.child('status').val() == 'UNAVAILABLE' || newData.child('status').val() == 'ARCHIVED') && (!newData.hasChild('active') || newData.child('active').isBoolean()) && (!newData.hasChild('stock') || (newData.child('stock').isNumber() && newData.child('stock').val() >= 0)) && (!newData.hasChild('reorderLevel') || (newData.child('reorderLevel').isNumber() && newData.child('reorderLevel').val() >= 0))"
+          }
         },
         "private": {
           ".read": false,
-          ".write": false
+          ".write": false,
+          "staffInvitations": {
+            ".indexOn": ["emailLower", "status"]
+          },
+          "inventory": {
+            ".read": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('inventory').val() != false)",
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('inventory').val() != false)",
+            "$id": { ".validate": "(!newData.hasChild('name') || (newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 200)) && (!newData.hasChild('quantity') || (newData.child('quantity').isNumber() && newData.child('quantity').val() >= 0)) && (!newData.hasChild('reorderLevel') || (newData.child('reorderLevel').isNumber() && newData.child('reorderLevel').val() >= 0)) && (!newData.hasChild('costPrice') || (newData.child('costPrice').isNumber() && newData.child('costPrice').val() >= 0)) && (!newData.hasChild('active') || newData.child('active').isBoolean()) && (!newData.hasChild('status') || newData.child('status').val() == 'ACTIVE' || newData.child('status').val() == 'ARCHIVED')" }
+          }
+        },
+        "public": {
+          ".read": false,
+          ".write": false,
+          "categories": {
+            ".indexOn": ["status", "visible"],
+            ".read": "(query.orderByChild == 'status' && query.equalTo == 'PUBLISHED') || (query.orderByChild == 'visible' && query.equalTo == true) || (auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false))",
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)",
+            "$categoryId": { ".validate": "newData.hasChildren(['name']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 200 && (!newData.hasChild('visible') || newData.child('visible').isBoolean()) && (!newData.hasChild('status') || (newData.child('status').isString() && (newData.child('status').val() == 'PUBLISHED' || newData.child('status').val() == 'HIDDEN' || newData.child('status').val() == 'DRAFT' || newData.child('status').val() == 'ARCHIVED'))) && (!newData.hasChild('order') || (newData.child('order').isNumber() && newData.child('order').val() >= 0))" }
+          },
+          "discounts": {
+            ".read": true,
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)",
+            "$id": { ".validate": "(!newData.hasChild('value') || (newData.child('value').isNumber() && newData.child('value').val() >= 0)) && (!newData.hasChild('active') || newData.child('active').isBoolean())" }
+          },
+          "delivery": {
+            ".read": true,
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)",
+            "$province": { "$district": { ".validate": "newData.hasChildren(['price']) && newData.child('price').isNumber() && newData.child('price').val() >= 0 && (!newData.hasChild('enabled') || newData.child('enabled').isBoolean())" } }
+          },
+          "paymentMethods": {
+            ".read": true,
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)",
+            "$id": { ".validate": "newData.hasChildren(['name', 'type']) && newData.child('name').isString() && newData.child('type').isString() && (!newData.hasChild('enabled') || newData.child('enabled').isBoolean())" }
+          },
+          "homepage": { ".read": true, ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)" },
+          "aiAssistant": { ".read": true, ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)" },
+          "settings": { ".read": true, ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'ADMIN' && root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('settings').val() != false))" }
         }
       }
     },
