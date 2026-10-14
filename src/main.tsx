@@ -228,9 +228,9 @@ function CheckoutConnected({ cart }: { cart: CartState }) {
   const areas = selectedProvince?.areas || selectedProvince?.districts || {}
   const enabledAreas = Object.fromEntries(Object.entries(areas).filter(([, area]) => area && area.enabled !== false))
   const selectedArea = enabledAreas[district]
-  const selectedPayment = publicConfig.paymentMethods[paymentMethodId]
+  const selectedPayment = paymentMethods.find(method => method.id === paymentMethodId)
   useEffect(() => { if (!province && provinceNames[0]) setProvince(provinceNames[0]) }, [province, provinceNames.join('|')])
-  useEffect(() => { if (!paymentMethodId && paymentMethods[0]) setPaymentMethodId(paymentMethods[0].id) }, [paymentMethodId, paymentMethods.map(method => method.id).join('|')])
+  useEffect(() => { if (!paymentMethods.some(method => method.id === paymentMethodId)) setPaymentMethodId(paymentMethods[0]?.id || '') }, [paymentMethodId, paymentMethods.map(method => method.id).join('|')])
   useEffect(() => { if (district && !enabledAreas[district]) setDistrict('') }, [province, district, Object.keys(enabledAreas).join('|')])
   const createWhatsAppUrl = (orderId: string, total: number, method: PaymentMethodRecord) => {
     const whatsapp = typeof publicConfig.settings.whatsapp === 'string' ? publicConfig.settings.whatsapp.replace(/\D/g, '') : ''

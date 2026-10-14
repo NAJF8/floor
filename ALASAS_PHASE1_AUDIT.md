@@ -208,6 +208,9 @@ Production Firebase data, and it does not push or deploy either repository.
   selectable lists and normalizes the public config with the same enabled-state
   boundary. Customer production build passed; browser/config readback remains
   unverified without a deployed public configuration.
+- Checkout now also resets a payment selection when changing province makes that
+  method unsupported, preventing a stale client selection from being submitted.
+  Customer production build passed; the callable remains the final authority.
 - The local catalog-rules smoke test passed against the correct
   `floor-232bc-default-rtdb` Database Emulator namespace: an unfiltered public
   read returned `401`, while `orderBy status == PUBLISHED` returned `200` with
