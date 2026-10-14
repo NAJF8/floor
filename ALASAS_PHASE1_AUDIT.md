@@ -321,8 +321,12 @@ Production Firebase data, and it does not push or deploy either repository.
   leaving its transition to `confirmOrderPayment`; `APPROVED` remains the
   selected state in the generic selector so the manager can move it to
   `PREPARING`, while the selector still excludes generic entry to dedicated
-  states. The Admin build passed; authenticated order-state runtime remains
-  unverified.
+  states. The Admin build passed. In the combined local browser acceptance,
+  Customer created `-P3s6RIidChXgYD9sBfc` for `19,000` IQD and the Admin Orders
+  page rendered the same order. The synthetic Admin session then invoked the
+  authorized local payment-confirmation and approval callables directly (the
+  browser confirmation dialog could not be reliably accepted by the UI driver);
+  the Admin page subsequently rendered `CONFIRMED` and `تمت الموافقة`.
 - The Functions layer now enforces an explicit order-state transition map and
   rejects unsafe jumps such as `NEW -> DELIVERED`; payment confirmation moves
   eligible orders to `PAYMENT_CONFIRMED` before approval. The transition unit
@@ -368,6 +372,12 @@ Production Firebase data, and it does not push or deploy either repository.
   sensitive CVV input was rejected by the Admin callable. This is Emulator
   evidence; Admin browser behavior and Production Rules/deployment remain
   unverified.
+- Combined Customer-to-Admin local browser acceptance also read back the
+  approval side effects: product stock changed `4 -> 3`, ribbon inventory
+  changed `3 -> 2`, and the reservation was `RESERVED`. This proves the local
+  callable plus Admin UI readback path only; it is not Production evidence and
+  does not claim that the confirmation button itself was accepted by the UI
+  driver.
 - Removed an unsupported `/auth` block from the isolated `firebase.json` after
   Firebase CLI warned that `authorizedDomains` and `providers` were unknown
   configuration properties. The CLI warning disappeared; Google Sign-In code
@@ -428,9 +438,9 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
-| Admin order status controls | PASS (local callable); live UI NOT VERIFIED | Payment confirmation, approval, repeat approval, and unsafe transition rejection passed in the Emulator; live Admin controls remain unverified |
+| Admin order status controls | PASS (local callable + local Admin UI readback); Production NOT VERIFIED | Customer-created synthetic order was rendered in Admin, local confirmation/approval callables returned `CONFIRMED`/`APPROVED`, and the refreshed Admin page rendered `CONFIRMED`/`تمت الموافقة`; UI confirmation dialog acceptance itself was not proven |
 | Order status state machine | PASS (local emulator + unit) | Callable runtime rejected `NEW -> DELIVERED`; dedicated payment confirmation and approval transitions were read back; live Admin acceptance remains unverified |
-| Payment approval/inventory | PASS (emulator only) | Confirmed payment, concurrent approval lock, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven; Production remains unverified |
+| Payment approval/inventory | PASS (Emulator + local browser/readback); Production NOT VERIFIED | Customer-created order was approved through the local Admin callable; readback showed stock `4 -> 3`, ribbon inventory `3 -> 2`, and `RESERVED`; concurrent lock/retry evidence remains in the Emulator harness |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, invalid financial/catalog values rejected, sensitive CVV rejected, Viewer write rejected; Production remains unverified |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
@@ -467,8 +477,8 @@ Production Firebase data, and it does not push or deploy either repository.
 | ZAINCASH | PASS (Emulator + local browser); Production NOT VERIFIED | Wallet number rendered in Customer Checkout and pending-review/transfer-reference backend readback passed |
 | CASH_PAYMENT | PASS (Emulator + local browser); Production NOT VERIFIED | Customer browser created `31,000` IQD order as `UNPAID`; backend confirmation and approval path also passed |
 | WHATSAPP_ORDER | PASS (local Emulator browser); Production NOT VERIFIED | Complete encoded `wa.me` URL rendered with order, items, delivery, payment, and tracking fields; URL was not opened or sent |
-| PAYMENT_CONFIRMATION | PASS (Emulator only) | Authorized confirmation and audit readback passed |
-| ADMIN_ORDER_APPROVAL | PASS (Emulator only) | Approval lock and repeat behavior passed |
+| PAYMENT_CONFIRMATION | PASS (Emulator + local Admin readback); Production NOT VERIFIED | Customer-created cash order was confirmed through the authorized local callable and refreshed Admin Orders rendered `CONFIRMED`; UI dialog acceptance itself was not proven |
+| ADMIN_ORDER_APPROVAL | PASS (Emulator + local Admin readback); Production NOT VERIFIED | Customer-created order was approved through the authorized local callable; refreshed Admin Orders rendered `تمت الموافقة`, and RTDB readback showed `APPROVED` with `RESERVED` inventory |
 | WHATSAPP_APPROVAL_MESSAGE | BUILD PASS; runtime NOT VERIFIED | Approval URL/message preparation exists; no automatic sending |
 | DELIVERY_AREAS | PASS (local backend + browser) | Enabled fee rendered; disabled area rejected/hidden |
 | STAFF_PERMISSIONS | PASS (Emulator only) | UID linking and Viewer/Employee scope checks passed |
@@ -478,4 +488,4 @@ Production Firebase data, and it does not push or deploy either repository.
 | ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
 | IMPORT_EXPORT | BUILD PASS; runtime NOT VERIFIED | Merge-only validation compiled; no live Admin session |
 | LIVE_CUSTOMER_TEST | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered two-product catalog, cart total, delivery/payment choices, authenticated order creation, WhatsApp URL, Account order, and Track Order |
-| LIVE_ADMIN_TEST | PASS (local Emulator browser); Production NOT VERIFIED | Dev+Emulator-only synthetic Admin login rendered dashboard, products, categories, orders, discounts, payments, and reports; Google-authenticated Production acceptance was not performed |
+| LIVE_ADMIN_TEST | PASS (local Emulator browser + Customer-to-Admin readback); Production NOT VERIFIED | Synthetic Admin login rendered dashboard, products, categories, orders, discounts, payments, and reports; a Customer-created cash order appeared in Admin, callable confirmation/approval read back, and refreshed Orders rendered `CONFIRMED`/`تمت الموافقة`; Google-authenticated Production acceptance was not performed |
