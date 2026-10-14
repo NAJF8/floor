@@ -65,6 +65,7 @@ test('enforces the order status state machine', () => {
   assert.equal(canTransitionOrderStatus('APPROVED', 'PREPARING'), true)
   assert.equal(canTransitionOrderStatus('NEW', 'DELIVERED'), false)
   assert.equal(canTransitionOrderStatus('PREPARING', 'APPROVED'), false)
+  assert.equal(canTransitionOrderStatus('APPROVED', 'CANCELLED'), false)
   assert.equal(canTransitionOrderStatus('DELIVERED', 'CANCELLED'), false)
 })
 
