@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Heart, Instagram, Menu, Minus, Package, Palette, Phone, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, X, Zap } from 'lucide-react'
-import { signInWithPopup } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import './styles.css'
 import { subscribeToShopCategories, subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerCategoryRecord, type FlowerProductRecord, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
@@ -29,7 +29,9 @@ const categories: [string, string, string][] = [
 const money = (n: number) => `${n.toLocaleString('en-US')} د.ع`
 const favoriteStorageKey = 'alasas-favorites'
 function readFavoriteIds(): string[] { try { const value = JSON.parse(localStorage.getItem(favoriteStorageKey) || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [] } catch { return [] } }
-function toggleFavoriteId(id: string): boolean { const current = readFavoriteIds(); const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem(favoriteStorageKey, JSON.stringify(next)); window.dispatchEvent(new Event('alasas-favorites-changed')); return next.includes(id) }
+function syncFavoriteIdsToAccount(ids: string[]) { if (!firebaseAuth.currentUser) return; void httpsCallable(firebaseFunctions, 'syncCustomerFavorites')({ favoriteIds: ids }).catch(() => undefined) }
+function toggleFavoriteId(id: string): boolean { const current = readFavoriteIds(); const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem(favoriteStorageKey, JSON.stringify(next)); syncFavoriteIdsToAccount(next); window.dispatchEvent(new Event('alasas-favorites-changed')); return next.includes(id) }
+function FavoriteAccountSync() { useEffect(() => onAuthStateChanged(firebaseAuth, user => { if (!user) return; const localIds = readFavoriteIds(); void httpsCallable(firebaseFunctions, 'syncCustomerFavorites')({ favoriteIds: localIds }).then(result => { const data = result.data as { favoriteIds?: unknown }; const ids = Array.isArray(data.favoriteIds) ? data.favoriteIds.filter((id): id is string => typeof id === 'string') : localIds; localStorage.setItem(favoriteStorageKey, JSON.stringify(ids)); window.dispatchEvent(new Event('alasas-favorites-changed')) }).catch(() => undefined) }), []); return null }
 
 type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; publicConfig: ShopPublicConfig }
 const CatalogContext = createContext<CatalogState | null>(null)
@@ -97,6 +99,7 @@ function App() {
   const cart = useCart(); const [menu, setMenu] = useState(false); const [toast, setToast] = useState('')
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
   return <CatalogProvider><div className="app-shell">
+    <FavoriteAccountSync />
     <Announcement />
     <Header menu={menu} setMenu={setMenu} cartCount={cart.count} />
     <AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="toast"><Check size={16} /> {toast}</motion.div>}</AnimatePresence>

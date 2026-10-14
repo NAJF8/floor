@@ -86,9 +86,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - Admin Categories now has a structured editor for Arabic/English names,
   descriptions, image, icon, order, visibility, and featured state. A linked
   category is archived and hidden rather than deleting its products.
-- Customer favorites now persist locally for anonymous visitors and render in
-  the Favorites page; Google-account synchronization remains intentionally
-  unimplemented until a safe user-scoped backend path is added.
+- Customer favorites persist locally for anonymous visitors and now merge into
+  `users/{uid}/favorites` through an authenticated `syncCustomerFavorites`
+  callable after sign-in. Synthetic Emulator readback merged two local IDs
+  with a third account ID and rejected an invalid path-like ID.
 - Customer order tracking now calls a dedicated `getCustomerOrder` callable;
   it returns a sanitized order summary only when the authenticated UID owns
   the requested order. Synthetic emulator readback returned the owner's
@@ -182,7 +183,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Coupon pricing and usage | PASS (unit + emulator) | 7 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
-| Favorites | BUILD PASS; local visitor behavior NOT VERIFIED | LocalStorage persistence and Favorites rendering are wired; account sync is not implemented |
+| Favorites | PASS (emulator only) | Local visitor storage plus authenticated callable merge/readback; Google popup/live Production flow remains unverified |
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |

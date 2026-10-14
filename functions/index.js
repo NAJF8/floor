@@ -370,3 +370,17 @@ export const getCustomerOrder = onCall({ region: 'europe-west1', enforceAppCheck
     items: Array.isArray(order.items) ? order.items.map(item => ({ name: item.name || '', quantity: item.quantity || 0, lineTotal: item.lineTotal || 0 })) : [],
   }
 })
+
+export const syncCustomerFavorites = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const uid = authUid(request)
+  const supplied = request.data?.favoriteIds
+  if (!Array.isArray(supplied) || supplied.length > 200 || supplied.some((id) => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(id))) {
+    throw new HttpsError('invalid-argument', 'Favorite IDs are invalid.')
+  }
+  const favoritesRef = database.ref(`users/${uid}/favorites`)
+  const current = (await favoritesRef.get()).val()
+  const existing = current && typeof current === 'object' && !Array.isArray(current) ? Object.entries(current).filter(([, value]) => value === true).map(([id]) => id) : []
+  const favoriteIds = [...new Set([...existing, ...supplied])].slice(0, 200)
+  await favoritesRef.set(Object.fromEntries(favoriteIds.map((id) => [id, true])))
+  return { favoriteIds }
+})
