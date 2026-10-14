@@ -384,3 +384,23 @@ export const syncCustomerFavorites = onCall({ region: 'europe-west1', enforceApp
   await favoritesRef.set(Object.fromEntries(favoriteIds.map((id) => [id, true])))
   return { favoriteIds }
 })
+
+export const listCustomerOrders = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const uid = authUid(request)
+  const snapshot = await database.ref(`shops/${SHOP_ID}/private/orders`).get()
+  const value = snapshot.val()
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { orders: [] }
+  const orders = Object.entries(value)
+    .filter(([, item]) => item && typeof item === 'object' && !Array.isArray(item) && item.uid === uid)
+    .map(([orderId, item]) => ({
+      orderId,
+      orderStatus: item.orderStatus || 'NEW',
+      paymentStatus: item.paymentStatus || 'UNPAID',
+      total: Number.isInteger(item.total) ? item.total : 0,
+      deliveryAt: item.deliveryAt || '',
+      createdAt: item.createdAt || null,
+    }))
+    .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
+    .slice(0, 20)
+  return { orders }
+})

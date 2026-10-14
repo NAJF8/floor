@@ -95,6 +95,10 @@ Production Firebase data, and it does not push or deploy either repository.
   the requested order. Synthetic emulator readback returned the owner's
   `PREPARING` order and 45,000 IQD total, while a second synthetic UID received
   `NOT_FOUND`.
+- Customer Account now calls `listCustomerOrders`, returning only sanitized
+  summaries owned by the authenticated UID and linking each result to the
+  secure tracking page. Synthetic Emulator readback returned one owner order
+  without phone data; a second UID returned only its own order.
 - Customer and Admin now prepare WhatsApp order/approval messages with a
   tracking URL; opening WhatsApp is explicitly not treated as proof of sending
   or payment.
@@ -185,6 +189,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Favorites | PASS (emulator only) | Local visitor storage plus authenticated callable merge/readback; Google popup/live Production flow remains unverified |
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
+| Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
