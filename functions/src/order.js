@@ -54,6 +54,8 @@ export function normalizeOrderInput(input) {
       ...(typeof item.giftMessage === 'string' ? { giftMessage: item.giftMessage.trim().slice(0, 500) } : {}),
     }
   })
+  const idempotencyKey = text(input.idempotencyKey, 'idempotency_key', 120)
+  if (!/^[A-Za-z0-9_-]{1,120}$/.test(idempotencyKey)) throw new Error('INVALID_IDEMPOTENCY_KEY')
   return {
     items,
     customerName: text(input.customerName, 'customer_name', 120),
@@ -68,7 +70,7 @@ export function normalizeOrderInput(input) {
     couponCode: typeof input.couponCode === 'string' ? input.couponCode.trim().toUpperCase().slice(0, 80) : '',
     paymentMethodId: text(input.paymentMethodId, 'payment_method_id', 100),
     transferReference: typeof input.transferReference === 'string' ? input.transferReference.trim().slice(0, 120) : '',
-    idempotencyKey: text(input.idempotencyKey, 'idempotency_key', 120),
+    idempotencyKey,
   }
 }
 

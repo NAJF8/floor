@@ -213,6 +213,9 @@ Production Firebase data, and it does not push or deploy either repository.
   pricing path. Unit coverage and the repeatable Emulator harness both rejected
   a synthetic `ClosedArea` with `FAILED_PRECONDITION`; enabled delivery still
   priced and completed normally.
+- Order IDs and idempotency keys are now constrained to Firebase-safe key
+  characters before any RTDB path is built. Unit and Emulator checks rejected
+  synthetic `../orders` inputs without touching another path.
 - The Customer checkout now filters disabled provinces and areas from the
   selectable lists and normalizes the public config with the same enabled-state
   boundary. Customer production build passed; browser/config readback remains

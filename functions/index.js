@@ -47,6 +47,11 @@ function idText(value, field) {
   if (typeof value !== 'string' || value.trim().length === 0 || value.length > 120) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
   return value.trim()
 }
+function keyText(value, field) {
+  const key = idText(value, field)
+  if (!/^[A-Za-z0-9_-]{1,120}$/.test(key)) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+  return key
+}
 
 function adminWritePolicy(path) {
   const prefix = `shops/${SHOP_ID}/`
@@ -277,7 +282,7 @@ export const setStaffMembership = onCall({ region: 'europe-west1', enforceAppChe
 
 export const confirmOrderPayment = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
   const actor = await requireStaff(request, 'orders', 'MANAGER')
-  const orderId = idText(request.data?.orderId, 'orderId')
+  const orderId = keyText(request.data?.orderId, 'orderId')
   const orderRef = database.ref(orderPath(orderId))
   const before = (await orderRef.get()).val()
   if (!before) throw new HttpsError('not-found', 'Order not found.')
@@ -339,7 +344,7 @@ function prepareApproval(shopData, orderId, actorUid, now) {
 
 export const approveOrder = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
   const actor = await requireStaff(request, 'orders', 'MANAGER')
-  const orderId = idText(request.data?.orderId, 'orderId')
+  const orderId = keyText(request.data?.orderId, 'orderId')
   const lockRef = database.ref(`shops/${SHOP_ID}/private/inventoryLock`)
   const lockToken = `${actor.uid}:${Math.random().toString(36).slice(2)}`
   const now = Date.now()
@@ -371,7 +376,7 @@ export const approveOrder = onCall({ region: 'europe-west1', enforceAppCheck: fa
 
 export const setOrderStatus = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
   const actor = await requireStaff(request, 'orders', 'EMPLOYEE')
-  const orderId = idText(request.data?.orderId, 'orderId')
+  const orderId = keyText(request.data?.orderId, 'orderId')
   const nextStatus = idText(request.data?.orderStatus, 'orderStatus')
   const allowed = new Set(['NEW', 'AWAITING_PAYMENT', 'PAYMENT_REVIEW', 'PAYMENT_CONFIRMED', 'APPROVED', 'PREPARING', 'READY_FOR_DELIVERY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REJECTED', 'CANCELLED'])
   if (!allowed.has(nextStatus) || ['PAYMENT_CONFIRMED', 'APPROVED'].includes(nextStatus)) throw new HttpsError('invalid-argument', 'Use the dedicated payment or approval action.')
@@ -489,7 +494,7 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
 
 export const getCustomerOrder = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
   const uid = authUid(request)
-  const orderId = idText(request.data?.orderId, 'orderId')
+  const orderId = keyText(request.data?.orderId, 'orderId')
   const snapshot = await database.ref(orderPath(orderId)).get()
   const order = snapshot.val()
   if (!order || order.uid !== uid) throw new HttpsError('not-found', 'Order not found.')

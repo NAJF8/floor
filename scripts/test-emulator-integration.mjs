@@ -120,6 +120,7 @@ try {
   assert.equal(ownUserReadStatus, 'READ_SUCCEEDED')
   assert.equal(otherUserReadStatus, 'PERMISSION_DENIED')
   assert.equal(privateReadStatus, 'PERMISSION_DENIED')
+  await expectFunctionError('getCustomerOrder', customer.token, { orderId: '../users' }, 'INVALID_ARGUMENT')
   const mergedFavorites = await callFunction('syncCustomerFavorites', customer.token, { favoriteIds: ['rose', 'gift-box'], replace: false })
   assert.deepEqual(new Set(mergedFavorites.favoriteIds), new Set(['rose', 'gift-box']))
   const replacedFavorites = await callFunction('syncCustomerFavorites', customer.token, { favoriteIds: ['rose'], replace: true })
@@ -150,6 +151,7 @@ try {
   await expectFunctionError('adminWrite', viewer.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Unauthorized synthetic category' } }, 'PERMISSION_DENIED')
 
   const input = { items: [{ productId: 'rose', quantity: 1, packaging: 'Premium wrap', addOns: ['Ribbon'], giftMessage: 'Local test' }], customerName: 'Synthetic Customer', phone: '07700000000', recipientName: 'Synthetic Recipient', recipientPhone: '07700000001', province: 'Najaf', district: 'University', address: 'Local emulator only', deliveryAt: '2026-10-20T12:00', paymentMethodId: 'cash', idempotencyKey: 'local-integration-order-1' }
+  await expectFunctionError('createOrder', customer.token, { ...input, idempotencyKey: '../orders' }, 'FAILED_PRECONDITION')
   await expectFunctionError('createOrder', customer.token, { ...input, district: 'ClosedArea', idempotencyKey: 'local-integration-disabled-delivery' }, 'FAILED_PRECONDITION')
   const couponOrder = await callFunction('createOrder', customer.token, { ...input, couponCode: 'SYN10', idempotencyKey: 'local-integration-coupon' })
   assert.equal(couponOrder.total, 41000)
