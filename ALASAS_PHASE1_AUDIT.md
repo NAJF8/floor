@@ -302,6 +302,13 @@ Production Firebase data, and it does not push or deploy either repository.
   homepage description, and store name were also rendered by the Customer
   home page. These are Emulator-only callable/readback checks, not Admin UI
   button acceptance or Production evidence.
+- The same isolated run created category `قسم انعكاس الإدارة` through the
+  authorized Admin callable. Customer Home rendered it alongside the existing
+  published category; archiving it with `visible: false`, `active: false`, and
+  `status: ARCHIVED` removed only that category from Customer Home while the
+  existing category and products remained. This is local callable plus
+  Customer browser evidence; the Admin category form and Production reflection
+  remain unverified.
 - Checkout now also renders a local review card listing the selected product,
   quantity, and pre-delivery subtotal before submission. CUA read back one
   synthetic product at `15,000` IQD, the subtotal at `15,000` IQD, the enabled
@@ -435,7 +442,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Product/category CRUD | PASS (local callable + Customer reflection); Production NOT VERIFIED | Synthetic Admin create/read/update, two-image and price readback, merge-preservation regression, category archive, and Customer price/visibility reflection passed; Admin UI mutation and Production write/readback remain unverified |
 | Published product exposure | PASS (local Rules Emulator); Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product/config writes are disabled, and Admin reads through role-checked callable; local smoke returned 401 unfiltered and only the published fixture, rules were not deployed |
 | Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
-| Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
+| Published category reflection | PASS (local callable + Customer browser); Production NOT VERIFIED | A synthetic Admin-created category appeared in Customer Home and its archived/hidden state removed it while the existing category and products remained |
 | Dashboard metrics | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the dashboard and read authorized Firebase-backed data; Production session not tested |
 | Reports | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the report page with synthetic order/payment totals; Production session not tested |
 | Homepage/settings reflection | PASS (local callable + Customer browser); Production NOT VERIFIED | Local Admin-authorized updates to homepage title/description and store name rendered in the Customer home page; Admin form button acceptance and Production readback remain unverified |
@@ -474,7 +481,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | RTDB_RULES | NOT VERIFIED | Local Rules Emulator passed; Production parity not proven |
 | SUPER_ADMIN_ACCOUNTS | PASS | Both supplied UIDs read back unchanged and immutable |
 | DASHBOARD | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered Firebase-derived dashboard; Production session not tested |
-| CATEGORY_CRUD | PASS (local callable); Production NOT VERIFIED | Create/read/archive and product preservation passed in Emulator |
+| CATEGORY_CRUD | PASS (local callable + Customer reflection); Production NOT VERIFIED | Create/read/archive, product preservation, Customer appearance, and Customer removal after archive passed in Emulator |
 | DEFAULT_CATEGORIES | BLOCKED | Preview seed exists; no approved Admin credential for write |
 | PRODUCT_CRUD | PASS (local callable); Production NOT VERIFIED | Create/read/update, status boundary, price and image readback passed |
 | DEFAULT_PRODUCTS | BLOCKED | Preview seed exists; no approved Admin credential for write |
@@ -495,7 +502,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | WHATSAPP_APPROVAL_MESSAGE | BUILD PASS; runtime NOT VERIFIED | Approval URL/message preparation exists; no automatic sending |
 | DELIVERY_AREAS | PASS (local backend + browser) | Enabled fee rendered; disabled area rejected/hidden |
 | STAFF_PERMISSIONS | PASS (Emulator only) | UID linking and Viewer/Employee scope checks passed |
-| HOMEPAGE_BUILDER | BUILD PASS; runtime NOT VERIFIED | Editors and public reflection are wired; local Admin session covered navigation but no homepage mutation/readback was attempted |
+| HOMEPAGE_BUILDER | PASS (local callable + Customer browser); Production NOT VERIFIED | Local Admin-authorized homepage title/description update rendered in Customer Home; Admin form mutation and Production readback remain unverified |
 | AI_ASSISTANT_SETTINGS | BUILD PASS; runtime NOT VERIFIED | Public enable/disable behavior wired; no external AI generation |
 | REPORTS | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered derived reports; Production session not tested |
 | ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
