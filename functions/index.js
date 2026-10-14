@@ -416,7 +416,11 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
   if (!candidateOrderId) throw new HttpsError('internal', 'Could not allocate an order ID.')
   const claim = await requestRef.transaction((current) => current || { status: 'CREATING', orderId: candidateOrderId, createdAt: Date.now() })
   const claimValue = claim.snapshot.val()
-  if (claimValue?.status === 'COMPLETE' && claimValue.orderId) return { orderId: claimValue.orderId, reused: true }
+  if (claimValue?.status === 'COMPLETE' && claimValue.orderId) {
+    const existing = (await database.ref(orderPath(claimValue.orderId)).get()).val()
+    if (!existing) throw new HttpsError('internal', 'Completed order record is missing.')
+    return { orderId: claimValue.orderId, reused: true, total: existing.total, paymentStatus: existing.paymentStatus }
+  }
   const orderId = claimValue?.orderId || candidateOrderId
   let discountReservation = null
   let preparedOrder = null

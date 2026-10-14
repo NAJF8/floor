@@ -169,6 +169,8 @@ try {
   const retry = await callFunction('createOrder', customer.token, input)
   assert.equal(retry.orderId, created.orderId)
   assert.equal(retry.reused, true)
+  assert.equal(retry.total, created.total)
+  assert.equal(retry.paymentStatus, created.paymentStatus)
   const ownerOrder = await callFunction('getCustomerOrder', customer.token, { orderId: created.orderId })
   assert.equal(ownerOrder.orderId, created.orderId)
   await expectFunctionError('getCustomerOrder', otherCustomer.token, { orderId: created.orderId }, 'NOT_FOUND')
