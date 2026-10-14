@@ -262,6 +262,10 @@ Production Firebase data, and it does not push or deploy either repository.
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
   `reused: true` without another decrement.
+- The repeatable harness also started two `approveOrder` calls concurrently for
+  the same order. Exactly one attempt performed the reservation and the other
+  completed as a reuse (or was safely rejected as busy); the final readback
+  still showed one stock/material decrement, not two.
 - Latest synthetic coupon readback: first order total `77,000` from an `80,000`
   subtotal plus `5,000` delivery minus `8,000` coupon discount; retry reused
   the same order ID; a second order with the exhausted code returned
@@ -344,7 +348,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
 | Admin order status controls | PASS (local callable); live UI NOT VERIFIED | Payment confirmation, approval, repeat approval, and unsafe transition rejection passed in the Emulator; live Admin controls remain unverified |
 | Order status state machine | PASS (local emulator + unit) | Callable runtime rejected `NEW -> DELIVERED`; dedicated payment confirmation and approval transitions were read back; live Admin acceptance remains unverified |
-| Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven; Production remains unverified |
+| Payment approval/inventory | PASS (emulator only) | Confirmed payment, concurrent approval lock, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven; Production remains unverified |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, invalid financial/catalog values rejected, sensitive CVV rejected, Viewer write rejected; Production remains unverified |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
