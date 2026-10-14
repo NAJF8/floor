@@ -39,6 +39,13 @@ test('applies one eligible percentage coupon from server data', () => {
   assert.equal(result.discountDetail.id, 'spring')
 })
 
+test('applies an eligible automatic promotion when no coupon code is entered', () => {
+  const result = calculateOrder(input, { red: { name: 'Red bouquet', category: 'roses', price: 40000, active: true, status: 'PUBLISHED', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }, { automatic: { name: 'Automatic roses offer', code: '', scope: 'CATEGORY', categoryId: 'roses', discountType: 'PERCENT', value: 10, active: true } })
+  assert.equal(result.discount, 8000)
+  assert.equal(result.total, 77000)
+  assert.equal(result.discountDetail.code, '')
+})
+
 test('does not apply expired or below-minimum discounts', () => {
   const base = { red: { name: 'Red bouquet', category: 'roses', price: 40000, active: true, status: 'PUBLISHED', stock: 3 } }
   const delivery = { Najaf: { areas: { University: { price: 5000 } } } }
