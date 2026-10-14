@@ -196,9 +196,13 @@ Production Firebase data, and it does not push or deploy either repository.
 - The local catalog-rules smoke test passed against the correct
   `floor-232bc-default-rtdb` Database Emulator namespace: an unfiltered public
   read returned `401`, while `orderBy status == PUBLISHED` returned `200` with
-  only the synthetic published record; an unauthenticated public settings
-  write also returned `401`. The harness refuses non-local hosts; this remains
-  local evidence, not Production Rules parity.
+  only the synthetic published record; unauthenticated writes to public
+  settings, private orders, and user favorites all returned `401`. The
+  repeatable Auth/Database/Functions harness then used the Firebase Web SDK
+  with a signed-in synthetic customer and received `PERMISSION_DENIED` for
+  direct writes to both `private` and `users`, while callable/Admin SDK paths
+  continued to pass. The harness refuses non-local hosts; this remains local
+  evidence, not Production Rules parity.
 - A CUA-rendered local Customer page showed the Arabic RTL layout, navigation,
   hero, category cards, product cards, and no blank screen. The isolated
   browser could not reach RTDB Emulator port `9000`, so it displayed the
@@ -306,7 +310,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer build | PASS | Local clean worktree and existing checkout build |
 | Admin build | PASS | Local admin checkout build |
 | Firebase connection | PASS (read-only) | Firebase CLI project/data reads |
-| RTDB Rules parity | NOT VERIFIED | Local anonymous public/private smoke only; authenticated Rules behavior and Production parity remain unproven |
+| RTDB Rules parity | NOT VERIFIED | Local anonymous smoke plus authenticated Firebase Web SDK denial checks passed; Production deployment/parity remains unproven |
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
