@@ -204,6 +204,10 @@ Production Firebase data, and it does not push or deploy either repository.
   pricing path. Unit coverage and the repeatable Emulator harness both rejected
   a synthetic `ClosedArea` with `FAILED_PRECONDITION`; enabled delivery still
   priced and completed normally.
+- The Customer checkout now filters disabled provinces and areas from the
+  selectable lists and normalizes the public config with the same enabled-state
+  boundary. Customer production build passed; browser/config readback remains
+  unverified without a deployed public configuration.
 - The local catalog-rules smoke test passed against the correct
   `floor-232bc-default-rtdb` Database Emulator namespace: an unfiltered public
   read returned `401`, while `orderBy status == PUBLISHED` returned `200` with

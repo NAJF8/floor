@@ -40,7 +40,7 @@ export type PaymentMethodRecord = {
 }
 
 export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?: string }
-export type DeliveryProvinceRecord = { areas?: Record<string, DeliveryAreaRecord>; districts?: Record<string, DeliveryAreaRecord> }
+export type DeliveryProvinceRecord = { enabled?: boolean; areas?: Record<string, DeliveryAreaRecord>; districts?: Record<string, DeliveryAreaRecord> }
 export type ShopPublicConfig = {
   paymentMethods: Record<string, PaymentMethodRecord>
   delivery: Record<string, DeliveryProvinceRecord>
@@ -150,7 +150,7 @@ export function subscribeToShopPublicConfig(
           const areaRecord = area as Record<string, unknown>
           if (Number.isInteger(areaRecord.price) && (areaRecord.price as number) >= 0 && areaRecord.enabled !== false) normalizedAreas[district] = { price: areaRecord.price as number, ...(typeof areaRecord.deliveryAt === 'string' ? { deliveryAt: areaRecord.deliveryAt } : {}) }
         }
-        delivery[province] = { areas: normalizedAreas }
+        delivery[province] = { enabled: record.enabled !== false, areas: normalizedAreas }
       }
     }
     onConfig({ paymentMethods, delivery, settings: value?.settings && typeof value.settings === 'object' && !Array.isArray(value.settings) ? value.settings : {}, homepage: value?.homepage && typeof value.homepage === 'object' && !Array.isArray(value.homepage) ? value.homepage : {}, aiAssistant: value?.aiAssistant && typeof value.aiAssistant === 'object' && !Array.isArray(value.aiAssistant) ? value.aiAssistant : {} })
