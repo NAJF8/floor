@@ -120,6 +120,9 @@ try {
   assert.equal(ownUserReadStatus, 'READ_SUCCEEDED')
   assert.equal(otherUserReadStatus, 'PERMISSION_DENIED')
   assert.equal(privateReadStatus, 'PERMISSION_DENIED')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/products`, value: { name: 'Invalid product', category: 'synthetic', price: -1, status: 'PUBLISHED', active: true } }, 'INVALID_ARGUMENT')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/private/inventory/wrap`, value: { quantity: -1 } }, 'INVALID_ARGUMENT')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/paymentMethods`, value: { name: 'Invalid payment', type: 'CARD', enabled: true } }, 'INVALID_ARGUMENT')
 
   const category = await callFunction('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Synthetic category', visible: true, active: true } })
   assert.match(category.key, /^[A-Za-z0-9_-]+$/)

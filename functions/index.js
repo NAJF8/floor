@@ -79,6 +79,136 @@ function rejectSensitiveFields(value) {
   if (/(pin|cvv|cvc|expiry|expiration|cardnumber|serviceaccount|github.?token|private.?key)/.test(serialized)) throw new HttpsError('invalid-argument', 'Sensitive payment or secret fields are not accepted.')
 }
 
+const productStatuses = new Set(['PUBLISHED', 'HIDDEN', 'DRAFT', 'UNAVAILABLE', 'ARCHIVED'])
+const paymentTypes = new Set(['CASH', 'MASTERCARD', 'BANK_TRANSFER', 'ZAINCASH'])
+const discountTypes = new Set(['PERCENT', 'FIXED'])
+const discountScopes = new Set(['ALL', 'PRODUCT', 'CATEGORY'])
+
+function adminRecord(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new HttpsError('invalid-argument', 'Administrative value must be an object.')
+  return value
+}
+
+function optionalAdminString(value, field, max = 500) {
+  if (value !== undefined && (typeof value !== 'string' || value.length > max)) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+}
+
+function optionalAdminInteger(value, field, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+  if (value !== undefined && (!Number.isInteger(value) || value < min || value > max)) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+}
+
+function optionalAdminBoolean(value, field) {
+  if (value !== undefined && typeof value !== 'boolean') throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+}
+
+function optionalAdminStringArray(value, field, maxItems = 50, maxLength = 240) {
+  if (value !== undefined && (!Array.isArray(value) || value.length > maxItems || value.some((item) => typeof item !== 'string' || item.length > maxLength))) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+}
+
+function validateInventoryRecipe(value) {
+  if (value === undefined) return
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 50) throw new HttpsError('invalid-argument', 'Invalid inventory recipe.')
+  for (const [materialId, quantity] of Object.entries(value)) {
+    if (!/^[A-Za-z0-9_-]{1,120}$/.test(materialId) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 100000) throw new HttpsError('invalid-argument', 'Invalid inventory recipe.')
+  }
+}
+
+function validateAdminValue(path, operation, rawValue) {
+  const value = adminRecord(rawValue)
+  const suffix = path.slice(`shops/${SHOP_ID}/`.length)
+  if (suffix === 'products' || suffix.startsWith('products/')) {
+    if (operation === 'create') {
+      if (typeof value.name !== 'string' || value.name.trim().length === 0 || typeof value.category !== 'string' || value.category.trim().length === 0) throw new HttpsError('invalid-argument', 'Product name and category are required.')
+    }
+    optionalAdminString(value.name, 'product name', 200)
+    optionalAdminString(value.nameEn, 'product English name', 200)
+    optionalAdminString(value.category, 'product category', 120)
+    optionalAdminString(value.description, 'product description', 4000)
+    optionalAdminString(value.sku, 'product SKU', 120)
+    optionalAdminString(value.image, 'product image', 1000)
+    optionalAdminStringArray(value.imageUrls, 'product images', 12, 1000)
+    optionalAdminStringArray(value.colors, 'product colors')
+    optionalAdminStringArray(value.addOns, 'product add-ons')
+    optionalAdminInteger(value.price, 'product price')
+    optionalAdminInteger(value.costPrice, 'product cost price')
+    optionalAdminInteger(value.compareAtPrice, 'compare-at price')
+    optionalAdminInteger(value.discountAmount, 'discount amount')
+    optionalAdminInteger(value.stock, 'product stock')
+    optionalAdminInteger(value.reorderLevel, 'product reorder level')
+    if (value.discountPercent !== undefined && (!Number.isInteger(value.discountPercent) || value.discountPercent < 0 || value.discountPercent > 100)) throw new HttpsError('invalid-argument', 'Invalid discount percentage.')
+    if (value.status !== undefined && (typeof value.status !== 'string' || !productStatuses.has(value.status))) throw new HttpsError('invalid-argument', 'Invalid product status.')
+    optionalAdminBoolean(value.active, 'product active state')
+    optionalAdminBoolean(value.featured, 'product featured state')
+    optionalAdminBoolean(value.bestseller, 'product bestseller state')
+    optionalAdminBoolean(value.isNew, 'product new state')
+    optionalAdminBoolean(value.onHomepage, 'product homepage state')
+    validateInventoryRecipe(value.inventoryRecipe)
+    return
+  }
+  if (suffix.startsWith('public/categories')) {
+    optionalAdminString(value.name, 'category name', 200)
+    optionalAdminString(value.nameEn, 'category English name', 200)
+    optionalAdminString(value.description, 'category description', 2000)
+    optionalAdminString(value.descriptionEn, 'category English description', 2000)
+    optionalAdminString(value.image, 'category image', 1000)
+    optionalAdminString(value.icon, 'category icon', 120)
+    optionalAdminInteger(value.order, 'category order')
+    optionalAdminBoolean(value.visible, 'category visibility')
+    optionalAdminBoolean(value.featured, 'category featured state')
+    optionalAdminBoolean(value.active, 'category active state')
+    if (value.status !== undefined && (typeof value.status !== 'string' || !productStatuses.has(value.status))) throw new HttpsError('invalid-argument', 'Invalid category status.')
+    return
+  }
+  if (suffix.startsWith('public/paymentMethods')) {
+    optionalAdminString(value.name, 'payment method name', 160)
+    if (value.type !== undefined && (typeof value.type !== 'string' || !paymentTypes.has(value.type))) throw new HttpsError('invalid-argument', 'Invalid payment method type.')
+    optionalAdminString(value.recipient, 'payment recipient', 240)
+    optionalAdminString(value.instructions, 'payment instructions', 2000)
+    optionalAdminString(value.bankName, 'bank name', 240)
+    optionalAdminString(value.accountName, 'account name', 240)
+    optionalAdminString(value.accountNumber, 'account number', 240)
+    optionalAdminString(value.iban, 'IBAN', 240)
+    optionalAdminString(value.walletNumber, 'wallet number', 80)
+    optionalAdminStringArray(value.provinces, 'payment provinces', 30, 120)
+    optionalAdminInteger(value.order, 'payment order')
+    optionalAdminBoolean(value.enabled, 'payment enabled state')
+    return
+  }
+  if (suffix.startsWith('public/discounts')) {
+    optionalAdminString(value.name, 'discount name', 200)
+    optionalAdminString(value.code, 'discount code', 80)
+    if (value.scope !== undefined && (typeof value.scope !== 'string' || !discountScopes.has(value.scope))) throw new HttpsError('invalid-argument', 'Invalid discount scope.')
+    if (value.discountType !== undefined && (typeof value.discountType !== 'string' || !discountTypes.has(value.discountType))) throw new HttpsError('invalid-argument', 'Invalid discount type.')
+    optionalAdminInteger(value.value, 'discount value')
+    optionalAdminInteger(value.minOrderTotal, 'discount minimum order')
+    optionalAdminInteger(value.maxDiscount, 'discount maximum')
+    optionalAdminInteger(value.maxUses, 'discount maximum uses')
+    optionalAdminBoolean(value.active, 'discount active state')
+    optionalAdminString(value.startsAt, 'discount start', 80)
+    optionalAdminString(value.endsAt, 'discount end', 80)
+    return
+  }
+  if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) {
+    optionalAdminString(value.name, 'inventory name', 200)
+    optionalAdminString(value.unit, 'inventory unit', 80)
+    optionalAdminInteger(value.quantity, 'inventory quantity')
+    optionalAdminInteger(value.reorderLevel, 'inventory reorder level')
+    optionalAdminInteger(value.costPrice, 'inventory cost price')
+    optionalAdminBoolean(value.active, 'inventory active state')
+    if (value.status !== undefined && (typeof value.status !== 'string' || !['ACTIVE', 'ARCHIVED'].includes(value.status))) throw new HttpsError('invalid-argument', 'Invalid inventory status.')
+    return
+  }
+  if (suffix.startsWith('public/delivery/')) {
+    optionalAdminInteger(value.price, 'delivery price')
+    optionalAdminString(value.deliveryAt, 'delivery schedule', 160)
+    optionalAdminBoolean(value.enabled, 'delivery enabled state')
+    return
+  }
+  if (suffix.startsWith('public/settings')) {
+    for (const field of ['enabled', 'acceptingOrders', 'temporaryClosed']) optionalAdminBoolean(value[field], field)
+  }
+}
+
 export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
   const operation = idText(request.data?.operation, 'operation')
   const path = idText(request.data?.path, 'path')
@@ -87,6 +217,7 @@ export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: fals
   const target = database.ref(path)
   rejectSensitiveFields(request.data?.value)
   if (operation === 'delete') throw new HttpsError('failed-precondition', 'Destructive deletes are disabled; archive the record instead.')
+  validateAdminValue(path, operation, request.data?.value)
   const now = Date.now()
   const audit = (key, extra = {}) => ({ action: 'ADMIN_WRITE', operation, path, recordKey: key || '', actorUid: actor.uid, createdAt: now, ...extra })
   if (operation === 'create') {
