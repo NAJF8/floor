@@ -90,7 +90,8 @@ Production Firebase data, and it does not push or deploy either repository.
   fields, stock, image URLs, marketing flags, and explicit `PUBLISHED`,
   `HIDDEN`, `DRAFT`, `UNAVAILABLE`, and `ARCHIVED` states. Customer catalog
   subscription filters non-published states and shows a valid compare-at price
-  and discount badge when present.
+  and discount badge when present. The Emulator harness also read back two
+  persisted image URLs after an Admin price update.
 - The Admin payment section now has structured types for cash, Mastercard,
   bank transfer, and ZainCash, including publish state, ordering, supported
   provinces, and allowed receiving details. Secret card fields remain rejected
@@ -285,11 +286,10 @@ Production Firebase data, and it does not push or deploy either repository.
   the same order. Exactly one attempt performed the reservation and the other
   completed as a reuse (or was safely rejected as busy); the final readback
   still showed one stock/material decrement, not two.
-- Latest synthetic coupon readback: first order total `77,000` from an `80,000`
-  subtotal plus `5,000` delivery minus `8,000` coupon discount; retry reused
-  the same order ID; a second order with the exhausted code returned
-  `DISCOUNT_UNAVAILABLE`; usage count was `1` and only the first order was
-  recorded.
+- Latest synthetic coupon readback: first order total `41,000` from a `40,000`
+  subtotal plus `5,000` delivery minus `4,000` coupon discount; a second order
+  with the exhausted code returned `DISCOUNT_UNAVAILABLE` and only one usage
+  was accepted.
 - Repeatable local Auth/Database/Functions acceptance passed with synthetic
   customer, manager, and second-customer identities. Server pricing returned
   `45,000` IQD, the idempotency retry reused the order, the owner read
@@ -349,7 +349,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
-| Product/category CRUD | PASS (local callable subset); Production NOT VERIFIED | Synthetic Admin create/read, category archive, and product-preservation readback passed; full browser acceptance and Production write/readback remain unverified |
+| Product/category CRUD | PASS (local callable subset); Production NOT VERIFIED | Synthetic Admin create/read/update, two-image and price readback, category archive, and product-preservation readback passed; full browser acceptance and Production write/readback remain unverified |
 | Published product exposure | PASS (local Rules Emulator); Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product/config writes are disabled, and Admin reads through role-checked callable; local smoke returned 401 unfiltered and only the published fixture, rules were not deployed |
 | Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |

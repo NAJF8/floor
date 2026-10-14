@@ -100,7 +100,7 @@ try {
   await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { catalog: true } })
   await root.set({
     products: { rose: { name: 'Synthetic rose', price: 40000, category: 'roses', status: 'PUBLISHED', active: true, stock: 2, inventoryRecipe: { wrap: 1 } } },
-    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: {} },
+    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: { synthetic: { name: 'Synthetic ten percent', code: 'SYN10', scope: 'ALL', discountType: 'PERCENT', value: 10, maxUses: 1, active: true } } },
     private: { inventory: { wrap: { name: 'Synthetic wrap', quantity: 3, active: true, status: 'ACTIVE' } } },
   })
 
@@ -137,6 +137,11 @@ try {
   assert.match(product.key, /^[A-Za-z0-9_-]+$/)
   const productsRead = await callFunction('adminRead', admin.token, { path: `shops/${SHOP_ID}/products` })
   assert.equal(productsRead.data[product.key].status, 'DRAFT')
+  assert.deepEqual(productsRead.data[product.key].imageUrls, ['https://example.test/synthetic.jpg'])
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/products/${product.key}`, value: { price: 13000, imageUrls: ['https://example.test/synthetic.jpg', 'https://example.test/synthetic-2.jpg'] } })
+  const updatedProduct = await callFunction('adminRead', admin.token, { path: `shops/${SHOP_ID}/products/${product.key}` })
+  assert.equal(updatedProduct.data.price, 13000)
+  assert.deepEqual(updatedProduct.data.imageUrls, ['https://example.test/synthetic.jpg', 'https://example.test/synthetic-2.jpg'])
   await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/public/categories/${category.key}`, value: { visible: false, active: false, status: 'ARCHIVED' } })
   const archivedCategory = await root.child(`public/categories/${category.key}`).get()
   assert.equal(archivedCategory.val().status, 'ARCHIVED')
@@ -146,6 +151,10 @@ try {
 
   const input = { items: [{ productId: 'rose', quantity: 1, packaging: 'Premium wrap', addOns: ['Ribbon'], giftMessage: 'Local test' }], customerName: 'Synthetic Customer', phone: '07700000000', recipientName: 'Synthetic Recipient', recipientPhone: '07700000001', province: 'Najaf', district: 'University', address: 'Local emulator only', deliveryAt: '2026-10-20T12:00', paymentMethodId: 'cash', idempotencyKey: 'local-integration-order-1' }
   await expectFunctionError('createOrder', customer.token, { ...input, district: 'ClosedArea', idempotencyKey: 'local-integration-disabled-delivery' }, 'FAILED_PRECONDITION')
+  const couponOrder = await callFunction('createOrder', customer.token, { ...input, couponCode: 'SYN10', idempotencyKey: 'local-integration-coupon' })
+  assert.equal(couponOrder.total, 41000)
+  assert.equal(couponOrder.paymentStatus, 'UNPAID')
+  await expectFunctionError('createOrder', customer.token, { ...input, couponCode: 'SYN10', idempotencyKey: 'local-integration-coupon-exhausted' }, 'FAILED_PRECONDITION')
   const created = await callFunction('createOrder', customer.token, input)
   assert.equal(created.paymentStatus, 'UNPAID')
   assert.equal(created.total, 45000)
@@ -188,7 +197,7 @@ try {
   const mastercardSnapshot = await root.child(`private/orders/${mastercardOrder.orderId}`).get()
   assert.equal(mastercardSnapshot.val().paymentMethod.type, 'MASTERCARD')
   assert.equal(mastercardSnapshot.val().paymentMethod.cvv, undefined)
-  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, ownUserReadStatus, otherUserReadStatus, privateReadStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference, mastercardOrderStatus: mastercardOrder.paymentStatus, mastercardTypeReadback: mastercardSnapshot.val().paymentMethod.type, mastercardCvvReadback: mastercardSnapshot.val().paymentMethod.cvv ?? null }, null, 2))
+  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, couponTotal: couponOrder.total, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, ownUserReadStatus, otherUserReadStatus, privateReadStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference, mastercardOrderStatus: mastercardOrder.paymentStatus, mastercardTypeReadback: mastercardSnapshot.val().paymentMethod.type, mastercardCvvReadback: mastercardSnapshot.val().paymentMethod.cvv ?? null, multiImageCount: updatedProduct.data.imageUrls.length, updatedProductPrice: updatedProduct.data.price }, null, 2))
 } finally {
   await root.remove()
   await database.ref('shopMemberships').remove()
