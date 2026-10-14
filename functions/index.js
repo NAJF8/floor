@@ -195,7 +195,7 @@ function prepareApproval(shopData, orderId, actorUid, now) {
     for (const [materialId, units] of Object.entries(item.inventoryRecipe || {})) {
       const material = inventory[materialId]
       const required = units * item.quantity
-      if (!material || !Number.isInteger(material.quantity) || material.quantity < required) return { error: 'INSUFFICIENT_MATERIAL' }
+      if (!material || material.active === false || material.status === 'ARCHIVED' || !Number.isInteger(material.quantity) || material.quantity < required) return { error: 'INSUFFICIENT_MATERIAL' }
       consumed[materialId] = (consumed[materialId] || 0) + required
     }
   }
