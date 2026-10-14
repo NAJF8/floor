@@ -44,6 +44,8 @@ export type ShopPublicConfig = {
   paymentMethods: Record<string, PaymentMethodRecord>
   delivery: Record<string, DeliveryProvinceRecord>
   settings: Record<string, unknown>
+  homepage: Record<string, unknown>
+  aiAssistant: Record<string, unknown>
 }
 
 /**
@@ -148,6 +150,6 @@ export function subscribeToShopPublicConfig(
         delivery[province] = { areas: normalizedAreas }
       }
     }
-    onConfig({ paymentMethods, delivery, settings: value?.settings && typeof value.settings === 'object' && !Array.isArray(value.settings) ? value.settings : {} })
+    onConfig({ paymentMethods, delivery, settings: value?.settings && typeof value.settings === 'object' && !Array.isArray(value.settings) ? value.settings : {}, homepage: value?.homepage && typeof value.homepage === 'object' && !Array.isArray(value.homepage) ? value.homepage : {}, aiAssistant: value?.aiAssistant && typeof value.aiAssistant === 'object' && !Array.isArray(value.aiAssistant) ? value.aiAssistant : {} })
   }, error => onError(error))
 }
