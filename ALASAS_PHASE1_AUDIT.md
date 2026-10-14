@@ -124,6 +124,9 @@ Production Firebase data, and it does not push or deploy either repository.
   this preserves order-history references and keeps the operation reversible by
   editing the product. The build passed; authenticated archive/readback remains
   unverified.
+- The Admin product list now provides local search, status filtering, and
+  name/price/stock sorting before any mutation is submitted. This is a build-
+  verified UI capability; authenticated browser behavior remains unverified.
 - Customer now reads `public/aiAssistant` settings for enablement, assistant
   name, welcome text, chips, and handoff text. It remains a configured
   conversational preview; no external AI/image-generation backend is called.
@@ -194,7 +197,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
-| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe product archive, and status filtering are local-only; no Production write performed |
+| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe product archive, search/filter/sort, and status filtering are local-only; no Production write performed |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
 | Reports | BUILD PASS; runtime NOT VERIFIED | Derived financial/operational sections and local CSV export compile; no live Admin session readback |
