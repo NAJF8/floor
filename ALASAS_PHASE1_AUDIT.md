@@ -16,7 +16,7 @@ Production Firebase data, and it does not push or deploy either repository.
     implementation source ends at `e28c5c9`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `60a8a5f`, with a clean
+  - The isolated implementation branch now ends at `89d8fcb`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -219,10 +219,12 @@ Production Firebase data, and it does not push or deploy either repository.
 - Admin Orders displays transfer references when present and exposes the
   approval message only after payment is confirmed; the message is a user-
   initiated WhatsApp link, not an automatic notification.
-- Admin Orders now renders `PAYMENT_CONFIRMED` and `APPROVED` as read-only
-  dedicated states, leaving their transitions to `confirmOrderPayment` and
-  `approveOrder`; the generic status selector excludes those values. The Admin
-  build passed; authenticated order-state runtime remains unverified.
+- Admin Orders now renders `PAYMENT_CONFIRMED` as a read-only dedicated state,
+  leaving its transition to `confirmOrderPayment`; `APPROVED` remains the
+  selected state in the generic selector so the manager can move it to
+  `PREPARING`, while the selector still excludes generic entry to dedicated
+  states. The Admin build passed; authenticated order-state runtime remains
+  unverified.
 - The Functions layer now enforces an explicit order-state transition map and
   rejects unsafe jumps such as `NEW -> DELIVERED`; payment confirmation moves
   eligible orders to `PAYMENT_CONFIRMED` before approval. The transition unit
@@ -284,7 +286,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
-| Admin order status controls | BUILD PASS; runtime NOT VERIFIED | Dedicated payment-confirmation and approval states are not sent through generic status writes; no live Admin acceptance |
+| Admin order status controls | BUILD PASS; runtime NOT VERIFIED | Payment confirmation is dedicated; approved orders can continue to preparation, while generic entry to dedicated states is blocked; no live Admin acceptance |
 | Order status state machine | UNIT PASS; callable runtime NOT VERIFIED | Explicit transition map rejects unsafe jumps and keeps approval/payment actions dedicated |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
