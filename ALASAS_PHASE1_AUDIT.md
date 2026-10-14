@@ -398,6 +398,13 @@ Production Firebase data, and it does not push or deploy either repository.
   `BANK_TRANSFER`, reference `SYNTHETIC-BANK-REF-1`, and order status `NEW`.
   The repeatable harness now asserts the same bank-transfer boundary alongside
   ZainCash and Mastercard. No real banking data was used.
+- Customer `/ai-bouquet-designer` runtime acceptance also passed locally: an
+  authorized synthetic Admin update enabled the assistant with a custom name,
+  welcome message, chips, and handoff text, and the Customer browser rendered
+  all of them. A second authorized update set `enabled: false`; the refreshed
+  Customer route rendered `المساعد غير متاح حالياً` and removed the custom
+  welcome text. The assistant remains a local conversational preview with no
+  external AI call.
 - Combined Customer-to-Admin local browser acceptance also read back the
   approval side effects: product stock changed `4 -> 3`, ribbon inventory
   changed `3 -> 2`, and the reservation was `RESERVED`. This proves the local
@@ -452,7 +459,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Dashboard metrics | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the dashboard and read authorized Firebase-backed data; Production session not tested |
 | Reports | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the report page with synthetic order/payment totals; Production session not tested |
 | Homepage/settings reflection | PASS (local callable + Customer browser); Production NOT VERIFIED | Local Admin-authorized updates to homepage title/description and store name rendered in the Customer home page; Admin form button acceptance and Production readback remain unverified |
-| AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
+| AI assistant settings | PASS (local callable + Customer browser); Production NOT VERIFIED | Customer rendered Admin-configured name/welcome/chips/handoff when enabled and rendered the unavailable state when disabled; no external AI generation |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, store-closure and province-payment enforcement, full retry readback, and owner-only access; Production callable is not deployed |
 | Customer cart/checkout wiring | PASS (local Emulator browser); Production NOT VERIFIED | CUA added two live Emulator products, read back `27,000` IQD subtotal, selected enabled delivery/payment, created a `31,000` IQD cash order, and rendered Account/Track Order; no deployed callable or Production checkout |
@@ -509,7 +516,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | DELIVERY_AREAS | PASS (local backend + browser) | Enabled fee rendered; disabled area rejected/hidden |
 | STAFF_PERMISSIONS | PASS (Emulator only) | UID linking and Viewer/Employee scope checks passed |
 | HOMEPAGE_BUILDER | PASS (local callable + Customer browser); Production NOT VERIFIED | Local Admin-authorized homepage title/description update rendered in Customer Home; Admin form mutation and Production readback remain unverified |
-| AI_ASSISTANT_SETTINGS | BUILD PASS; runtime NOT VERIFIED | Public enable/disable behavior wired; no external AI generation |
+| AI_ASSISTANT_SETTINGS | PASS (local callable + Customer browser); Production NOT VERIFIED | Enabled and disabled states plus custom local assistant fields were read from Emulator-backed Firebase and rendered by Customer; no external AI generation |
 | REPORTS | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered derived reports; Production session not tested |
 | ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
 | IMPORT_EXPORT | BUILD PASS; runtime NOT VERIFIED | Merge-only validation compiled; no live Admin session |
