@@ -29,7 +29,7 @@ try {
     public: {
       categories: { roses: { name: 'باقات اصطناعية', description: 'بيانات اختبار محلية', order: 1, visible: true, status: 'PUBLISHED' } },
       delivery: { Najaf: { enabled: true, areas: { University: { price: 4000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } },
-      paymentMethods: { cash: { name: 'نقدي اصطناعي', type: 'CASH', enabled: true, order: 1 }, zain: { name: 'زين كاش اصطناعي', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002', order: 2 } },
+      paymentMethods: { cash: { name: 'نقدي اصطناعي', type: 'CASH', enabled: true, order: 1 }, zain: { name: 'زين كاش اصطناعي', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002', order: 2 }, bank: { name: 'تحويل مصرفي اصطناعي', type: 'BANK_TRANSFER', enabled: true, bankName: 'Synthetic Bank', accountName: 'Synthetic AL ASAS', accountNumber: 'SYNTHETIC-ACCOUNT-1', iban: 'SYNTHETIC-IBAN-1', instructions: 'بيانات تحويل محلية للاختبار فقط', order: 3 } },
       settings: { storeName: 'AL ASAS Synthetic', whatsapp: '9647700000000', acceptingOrders: true },
       homepage: { heroTitle: 'بيانات Emulator فقط', heroDescription: 'لا توجد كتابة Production في هذا الاختبار.' },
       aiAssistant: { enabled: false },
