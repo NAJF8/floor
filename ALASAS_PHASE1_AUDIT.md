@@ -406,3 +406,43 @@ Production Firebase data, and it does not push or deploy either repository.
 | Default catalog seed | BLOCKED | Preview-only script exists; approved Admin credential is not configured |
 | GitHub image upload | BLOCKED | Server-side credential/service not present |
 
+## Master prompt report keys
+
+| Key | Status | Evidence boundary |
+| --- | --- | --- |
+| CUSTOMER_BUILD | PASS | Customer isolated build passed |
+| ADMIN_BUILD | PASS | Admin build passed |
+| CUSTOMER_DEPLOY | NOT VERIFIED | No deployment attempted |
+| ADMIN_DEPLOY | NOT VERIFIED | No deployment attempted |
+| FIREBASE_CONNECTION | PASS | Read-only project/database access |
+| RTDB_RULES | NOT VERIFIED | Local Rules Emulator passed; Production parity not proven |
+| SUPER_ADMIN_ACCOUNTS | PASS | Both supplied UIDs read back unchanged and immutable |
+| DASHBOARD | BUILD PASS; runtime NOT VERIFIED | Firebase-derived dashboard code; no authenticated Admin browser session |
+| CATEGORY_CRUD | PASS (local callable); Production NOT VERIFIED | Create/read/archive and product preservation passed in Emulator |
+| DEFAULT_CATEGORIES | BLOCKED | Preview seed exists; no approved Admin credential for write |
+| PRODUCT_CRUD | PASS (local callable); Production NOT VERIFIED | Create/read/update, status boundary, price and image readback passed |
+| DEFAULT_PRODUCTS | BLOCKED | Preview seed exists; no approved Admin credential for write |
+| MULTI_IMAGE_UPLOAD | BUILD PASS; upload BLOCKED | URL gallery works; secure upload service absent |
+| GITHUB_IMAGE_UPLOAD | BLOCKED | No approved server-side GitHub App/service |
+| INVENTORY_SYNC | PASS (Emulator only) | Concurrent approval reserved and decremented once |
+| DISCOUNTS | PASS (unit + Emulator) | Coupon and automatic promotion pricing/usage passed |
+| FAVORITES | PASS (Emulator + local browser) | Merge/readback and mobile detail toggle passed |
+| CART | PASS (local browser/build) | Multi-line cart model and checkout review compiled/rendered; live order not verified |
+| PAYMENT_METHODS | PASS (local backend + browser config) | Types, enablement, province enforcement and display passed locally |
+| BANK_TRANSFER | BUILD PASS; runtime NOT VERIFIED | Structured fields exist; no live authenticated session |
+| MASTERCARD_PAYMENT_INFO | PASS (Emulator safety) | Recipient fields read back; CVV rejected/not stored |
+| ZAINCASH | PASS (Emulator only) | Pending review and transfer reference readback passed |
+| CASH_PAYMENT | PASS (Emulator only) | Unpaid creation, confirmation and approval path passed |
+| WHATSAPP_ORDER | BUILD PASS; runtime NOT VERIFIED | Message URL prepared; opening is not sending proof |
+| PAYMENT_CONFIRMATION | PASS (Emulator only) | Authorized confirmation and audit readback passed |
+| ADMIN_ORDER_APPROVAL | PASS (Emulator only) | Approval lock and repeat behavior passed |
+| WHATSAPP_APPROVAL_MESSAGE | BUILD PASS; runtime NOT VERIFIED | Approval URL/message preparation exists; no automatic sending |
+| DELIVERY_AREAS | PASS (local backend + browser) | Enabled fee rendered; disabled area rejected/hidden |
+| STAFF_PERMISSIONS | PASS (Emulator only) | UID linking and Viewer/Employee scope checks passed |
+| HOMEPAGE_BUILDER | BUILD PASS; runtime NOT VERIFIED | Editors and public reflection are wired; no live Admin session |
+| AI_ASSISTANT_SETTINGS | BUILD PASS; runtime NOT VERIFIED | Public enable/disable behavior wired; no external AI generation |
+| REPORTS | BUILD PASS; runtime NOT VERIFIED | Derived reports/CSV compile; no live Admin session |
+| ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
+| IMPORT_EXPORT | BUILD PASS; runtime NOT VERIFIED | Merge-only validation compiled; no live Admin session |
+| LIVE_CUSTOMER_TEST | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered connected synthetic catalog/checkout/favorites |
+| LIVE_ADMIN_TEST | NOT VERIFIED | Google-authenticated Admin browser acceptance not performed |
