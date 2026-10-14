@@ -302,8 +302,11 @@ Production Firebase data, and it does not push or deploy either repository.
   for a destructive delete, linked a synthetic Firebase Auth UID as an
   `EMPLOYEE` with `products: false`, and a Viewer write received
   `PERMISSION_DENIED`. A synthetic ZainCash order remained `PENDING_REVIEW`
-  and its transfer reference read back unchanged. This is Emulator evidence;
-  Admin browser behavior and Production Rules/deployment remain unverified.
+  and its transfer reference read back unchanged. A synthetic Mastercard order
+  also remained `PENDING_REVIEW`, read back as `MASTERCARD`, and had no CVV;
+  sensitive CVV input was rejected by the Admin callable. This is Emulator
+  evidence; Admin browser behavior and Production Rules/deployment remain
+  unverified.
 - Removed an unsupported `/auth` block from the isolated `firebase.json` after
   Firebase CLI warned that `authorizedDomains` and `providers` were unknown
   configuration properties. The CLI warning disappeared; Google Sign-In code

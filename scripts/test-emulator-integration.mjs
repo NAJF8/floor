@@ -100,7 +100,7 @@ try {
   await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { catalog: true } })
   await root.set({
     products: { rose: { name: 'Synthetic rose', price: 40000, category: 'roses', status: 'PUBLISHED', active: true, stock: 2, inventoryRecipe: { wrap: 1 } } },
-    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' } }, discounts: {} },
+    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: {} },
     private: { inventory: { wrap: { name: 'Synthetic wrap', quantity: 3, active: true, status: 'ACTIVE' } } },
   })
 
@@ -123,6 +123,7 @@ try {
   await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/products`, value: { name: 'Invalid product', category: 'synthetic', price: -1, status: 'PUBLISHED', active: true } }, 'INVALID_ARGUMENT')
   await expectFunctionError('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/private/inventory/wrap`, value: { quantity: -1 } }, 'INVALID_ARGUMENT')
   await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/paymentMethods`, value: { name: 'Invalid payment', type: 'CARD', enabled: true } }, 'INVALID_ARGUMENT')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/paymentMethods`, value: { name: 'Sensitive payment', type: 'MASTERCARD', enabled: true, cvv: '123' } }, 'INVALID_ARGUMENT')
 
   const category = await callFunction('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Synthetic category', visible: true, active: true } })
   assert.match(category.key, /^[A-Za-z0-9_-]+$/)
@@ -176,7 +177,12 @@ try {
   assert.equal(transferOrder.paymentStatus, 'PENDING_REVIEW')
   const transferSnapshot = await root.child(`private/orders/${transferOrder.orderId}`).get()
   assert.equal(transferSnapshot.val().transferReference, 'SYNTHETIC-REF-1')
-  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, ownUserReadStatus, otherUserReadStatus, privateReadStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference }, null, 2))
+  const mastercardOrder = await callFunction('createOrder', customer.token, { ...input, paymentMethodId: 'mastercard', idempotencyKey: 'local-integration-order-3' })
+  assert.equal(mastercardOrder.paymentStatus, 'PENDING_REVIEW')
+  const mastercardSnapshot = await root.child(`private/orders/${mastercardOrder.orderId}`).get()
+  assert.equal(mastercardSnapshot.val().paymentMethod.type, 'MASTERCARD')
+  assert.equal(mastercardSnapshot.val().paymentMethod.cvv, undefined)
+  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, ownUserReadStatus, otherUserReadStatus, privateReadStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference, mastercardOrderStatus: mastercardOrder.paymentStatus, mastercardTypeReadback: mastercardSnapshot.val().paymentMethod.type, mastercardCvvReadback: mastercardSnapshot.val().paymentMethod.cvv ?? null }, null, 2))
 } finally {
   await root.remove()
   await database.ref('shopMemberships').remove()
