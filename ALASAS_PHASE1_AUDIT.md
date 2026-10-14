@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `e28c5c9`; the latest audit commit is
+    implementation source ends at `292fc89`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `89d8fcb`, with a clean
@@ -191,8 +191,9 @@ Production Firebase data, and it does not push or deploy either repository.
 - The local catalog-rules smoke test passed against the correct
   `floor-232bc-default-rtdb` Database Emulator namespace: an unfiltered public
   read returned `401`, while `orderBy status == PUBLISHED` returned `200` with
-  only the synthetic published record. The harness refuses non-local hosts;
-  this remains local evidence, not Production Rules parity.
+  only the synthetic published record; an unauthenticated public settings
+  write also returned `401`. The harness refuses non-local hosts; this remains
+  local evidence, not Production Rules parity.
 - A CUA-rendered local Customer page showed the Arabic RTL layout, navigation,
   hero, category cards, product cards, and no blank screen. The isolated
   browser could not reach RTDB Emulator port `9000`, so it displayed the
