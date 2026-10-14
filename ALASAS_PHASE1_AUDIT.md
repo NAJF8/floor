@@ -272,7 +272,10 @@ Production Firebase data, and it does not push or deploy either repository.
 1. Customer checkout cannot currently create orders under the local rules,
    because the callable is only locally emulated and is not deployed. Production
    also has no published catalog/delivery/payment configuration to accept a real
-   order, and deployed Rules parity has not been proven.
+   order, and deployed Rules parity has not been proven. A read-only
+   `firebase functions:list --project floor-232bc --debug` check returned
+   `403 SERVICE_DISABLED`: the Cloud Functions API has not been used or enabled
+   for this project.
 2. The payment and inventory callables are emulator-verified only and still need
    Production deployment plus authenticated Admin browser acceptance. A browser
    button or transfer reference is not financial proof.
