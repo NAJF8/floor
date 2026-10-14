@@ -6,6 +6,7 @@ import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Hea
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import './styles.css'
+import './store-theme.css'
 import { subscribeToShopCategories, subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerCategoryRecord, type FlowerProductRecord, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
 import { firebaseAuth, firebaseFunctions, googleProvider } from './firebase'
 import { AdminApp } from './adminApp'
@@ -70,6 +71,24 @@ function CatalogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false) }, reason => { setError(reason.message); setLoading(false) }), [])
   useEffect(() => subscribeToShopCategories('floor-232bc', setCategoryRecords, reason => setError(reason.message)), [])
   useEffect(() => subscribeToShopPublicConfig('floor-232bc', setPublicConfig, reason => setError(reason.message)), [])
+  useEffect(() => {
+    const settings = publicConfig.settings as Record<string, unknown>
+    const root = document.documentElement
+    const colors: Record<string, string> = {
+      '--store-primary': 'primaryColor',
+      '--store-secondary': 'secondaryColor',
+      '--store-button': 'buttonColor',
+      '--store-text': 'textColor',
+      '--store-background': 'backgroundColor',
+      '--store-header': 'headerColor',
+      '--store-footer': 'footerColor',
+    }
+    Object.entries(colors).forEach(([cssName, field]) => {
+      const value = typeof settings[field] === 'string' ? settings[field] as string : ''
+      if (/^#[0-9a-f]{6}$/i.test(value)) root.style.setProperty(cssName, value)
+      else root.style.removeProperty(cssName)
+    })
+  }, [publicConfig.settings])
   const liveProducts = records.map(mapCatalogProduct)
   const liveCategories: [string, string, string][] = categoryRecords.map(record => [record.name, record.description || 'اكتشف تشكيلات الأساس', record.image || 'photo-1523438885200-e635ba2c371e'])
   return <CatalogContext.Provider value={{ products: liveProducts.length ? liveProducts : products, categories: liveCategories.length ? liveCategories : categories, live: liveProducts.length > 0, loading, error, publicConfig }}>{children}</CatalogContext.Provider>

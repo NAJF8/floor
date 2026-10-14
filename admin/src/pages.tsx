@@ -274,7 +274,37 @@ export function ReportsPageEnhanced() {
 function ReadOnlyPage({ title, eyebrow, description, path }: { title: string; eyebrow: string; description: string; path: string }) { const { items, error } = useMap<Row>(pathFor(path)); return <><Header eyebrow={eyebrow} title={title} description={description} /><RecordList title="البيانات الحالية" items={items} error={error} /></> }
 
 export function HomePage() { return <DocumentPage title="الصفحة الرئيسية" eyebrow="المحتوى" description="إدارة البنرات والمحتوى العام." path="public/homepage" fields={['heroTitle', 'heroDescription', 'bannerImage', 'featuredCategory']} /> }
-export function SettingsPage() { return <DocumentPage title="إعدادات المتجر" eyebrow="الهوية" description="اسم المتجر والشعار والواتساب وأوقات العمل والإغلاق المؤقت." path="public/settings" fields={['storeName', 'logoUrl', 'whatsapp', 'openingHours', 'announcement', 'acceptingOrders', 'temporaryClosed']} /> }
+export function SettingsPage() { return <StoreSettingsPage /> }
+function StoreSettingsPage() {
+  const fullPath = pathFor('public/settings')
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const [loaded, setLoaded] = useState(false)
+  const [message, setMessage] = useState('')
+  const [preview, setPreview] = useState('')
+  const fields = ['storeName', 'storeNameEn', 'description', 'slogan', 'logoUrl', 'faviconUrl', 'coverUrl', 'whatsapp', 'phone', 'email', 'instagram', 'facebook', 'address', 'mapsUrl', 'openingHours', 'announcement', 'primaryColor', 'secondaryColor', 'buttonColor', 'textColor', 'backgroundColor', 'headerColor', 'footerColor']
+  const booleans = ['acceptingOrders', 'temporaryClosed']
+  useEffect(() => { readValue<Record<string, unknown>>(fullPath).then(value => { setDraft(Object.fromEntries([...fields, ...booleans].map(field => [field, valueText(value?.[field])] ))); setLoaded(true) }).catch(() => setLoaded(true)) }, [fullPath])
+  const update = (field: string, value: string) => setDraft(current => ({ ...current, [field]: value }))
+  const pickLocalImage = (file: File | undefined) => {
+    if (!file) return
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { setMessage('الصورة يجب أن تكون PNG أو JPG أو WebP.'); return }
+    if (file.size > 8 * 1024 * 1024) { setMessage('حجم الصورة يتجاوز 8MB.'); return }
+    const reader = new FileReader(); reader.onload = () => setPreview(String(reader.result || '')); reader.readAsDataURL(file)
+    setMessage('المعاينة محلية فقط. لم يتم رفع الملف أو حفظه في Firebase.')
+  }
+  const save = async (event: FormEvent) => {
+    event.preventDefault(); setMessage('')
+    try {
+      const data: Record<string, unknown> = {}
+      for (const field of fields) data[field] = draft[field] || ''
+      for (const field of booleans) data[field] = draft[field] === 'true'
+      for (const field of ['primaryColor', 'secondaryColor', 'buttonColor', 'textColor', 'backgroundColor', 'headerColor', 'footerColor']) if (data[field] && !/^#[0-9a-f]{6}$/i.test(String(data[field]))) throw new Error(`قيمة اللون غير صالحة: ${field}`)
+      await updateRecord(fullPath, data); setMessage('تم حفظ إعدادات المتجر في Firebase وتطبيق الألوان على Customer.')
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'تعذر حفظ إعدادات المتجر.') }
+  }
+  const imageFields = ['logoUrl', 'faviconUrl', 'coverUrl']
+  return <><Header eyebrow="الهوية" title="إعدادات المتجر" description="إعدادات الهوية والاتصال والألوان وساعات العمل. تُحفظ مباشرة في public/settings دون تغيير قواعد RTDB." /><form className="panel form-panel document-form" onSubmit={save}>{!loaded && <p>جارٍ تحميل الإعدادات...</p>}<div className="settings-section"><h2>هوية المتجر</h2><div className="field-grid">{fields.slice(0, 4).map(field => <Field key={field} label={field} area={['description', 'slogan'].includes(field)} value={draft[field] || ''} onChange={value => update(field, value)} />)}</div><div className="field-grid">{imageFields.map(field => <label className="field" key={field}><span>{field} — رابط آمن</span><input value={draft[field] || ''} onChange={event => update(field, event.target.value)} placeholder="https://..." /><input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => pickLocalImage(event.target.files?.[0])} /><small>رفع GitHub/Storage غير مفعّل من الواجهة حفاظاً على الأسرار؛ الرابط يُحفظ فقط بعد توفير وسيط آمن.</small></label>)}</div>{preview && <img className="settings-local-preview" src={preview} alt="معاينة محلية" />}</div><div className="settings-section"><h2>التواصل والموقع</h2><div className="field-grid">{fields.slice(7, 16).map(field => <Field key={field} label={field} area={['address', 'openingHours', 'announcement'].includes(field)} value={draft[field] || ''} onChange={value => update(field, value)} />)}</div></div><div className="settings-section"><h2>ألوان المتجر</h2><div className="field-grid color-fields">{fields.slice(16).map(field => <label className="field" key={field}><span>{field}</span><input type="color" value={/^#[0-9a-f]{6}$/i.test(draft[field] || '') ? draft[field] : '#b7ff2a'} onChange={event => update(field, event.target.value)} /><input value={draft[field] || ''} onChange={event => update(field, event.target.value)} placeholder="#b7ff2a" /></label>)}</div></div><div className="settings-section"><h2>حالة الطلبات</h2><div className="field-grid">{booleans.map(field => <label className="field" key={field}><span>{field}</span><select value={draft[field] || 'false'} onChange={event => update(field, event.target.value)}><option value="true">نعم</option><option value="false">لا</option></select></label>)}</div></div><Save busy={!loaded} />{message && <p className="form-message">{message}</p>}</form></>
+}
 export function AIAssistantPage() { return <DocumentPage title="مساعد AI" eyebrow="الإعدادات" description="إعداد الباقات ورسائل المساعد." path="public/aiAssistant" fields={['enabled', 'welcomeMessage', 'packageOptions', 'handoffMessage']} /> }
 function DocumentPage({ title, eyebrow, description, path, fields }: { title: string; eyebrow: string; description: string; path: string; fields: string[] }) { const fullPath = pathFor(path); const booleanFields = new Set(['enabled', 'acceptingOrders', 'temporaryClosed']); const [draft, setDraft] = useState<Record<string, string>>({}); const [loaded, setLoaded] = useState(false); const [message, setMessage] = useState(''); useEffect(() => { readValue<Record<string, unknown>>(fullPath).then((value) => { setDraft(Object.fromEntries(fields.map((field) => [field, valueText(value?.[field])] ))); setLoaded(true) }).catch(() => setLoaded(true)) }, [fullPath]); const save = async (e: FormEvent) => { e.preventDefault(); try { const data = Object.fromEntries(fields.map(field => [field, booleanFields.has(field) ? draft[field] === 'true' : draft[field] || ''])); await updateRecord(fullPath, data); setMessage('تم حفظ الإعدادات في Firebase.') } catch (err) { setMessage(err instanceof Error ? err.message : 'تعذر الحفظ.') } }; return <><Header eyebrow={eyebrow} title={title} description={description} /><form className="panel form-panel document-form" onSubmit={save}>{!loaded && <p>جارٍ تحميل الإعدادات...</p>}{fields.map((field) => booleanFields.has(field) ? <label className="field" key={field}><span>{field}</span><select value={draft[field] || 'false'} onChange={event => setDraft({ ...draft, [field]: event.target.value })}><option value="true">نعم</option><option value="false">لا</option></select></label> : <Field key={field} label={field} area value={draft[field] || ''} onChange={(v) => setDraft({ ...draft, [field]: v })} />)}<Save busy={!loaded} />{message && <p className="form-message">{message}</p>}</form></> }
 
