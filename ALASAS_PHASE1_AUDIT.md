@@ -31,7 +31,11 @@ Production Firebase data, and it does not push or deploy either repository.
   record. No products, public categories, orders, or inventory records were
   found at the paths currently used by the applications.
 - The local rules file is restrictive at the root, but deployed-rule parity was
-  not independently proven. No rules deployment was attempted.
+  not independently proven. A Database Emulator smoke test on the default
+  namespace returned public product `200` and anonymous private-order `401`.
+  Authenticated REST-token simulation was not accepted as trustworthy evidence
+  because the emulator treated the synthetic token as privileged; no rules
+  deployment was attempted.
 
 ## Current implementation boundary
 
@@ -174,6 +178,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer build | PASS | Local clean worktree and existing checkout build |
 | Admin build | PASS | Local admin checkout build |
 | Firebase connection | PASS (read-only) | Firebase CLI project/data reads |
+| RTDB Rules parity | NOT VERIFIED | Local anonymous public/private smoke only; authenticated Rules behavior and Production parity remain unproven |
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
