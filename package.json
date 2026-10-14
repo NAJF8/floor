@@ -6,6 +6,7 @@
   "workspaces": [
     "apps/customer",
     "apps/admin",
+    "functions",
     "packages/shared"
   ],
   "scripts": {
@@ -13,8 +14,12 @@
     "build:all": "npm run build:customer && npm run build:admin && node scripts/prepare-pages.mjs",
     "build:customer": "npm run build --workspace apps/customer",
     "build:admin": "npm run build --workspace apps/admin",
+    "test:functions": "npm test --workspace functions",
+    "test:emulator": "node scripts/test-emulator-integration.mjs",
+    "test:published-catalog": "node scripts/test-published-catalog-rules.mjs",
     "dev:customer": "npm run dev --workspace apps/customer",
     "dev:admin": "npm run dev --workspace apps/admin",
-    "provision:super-admins": "npm run provision:super-admins --workspace apps/admin"
+    "provision:super-admins": "npm run provision:super-admins --workspace apps/admin",
+    "seed:default-catalog": "node scripts/seed-default-catalog.mjs"
   }
 }

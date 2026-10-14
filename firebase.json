@@ -1,22 +1,19 @@
 {
+  "functions": {
+    "source": "functions"
+  },
   "database": {
     "rules": "database.rules.json"
   },
-  "auth": {
-    "authorizedDomains": [
-      "najf8.github.io",
-      "floor-232bc.firebaseapp.com",
-      "localhost"
-    ],
-    "providers": {
-      "googleSignIn": {
-        "oAuthBrandDisplayName": "AL ASAS Flower Commerce",
-        "supportEmail": "alasastech0@gmail.com",
-        "authorizedRedirectUris": [
-          "https://floor-232bc.firebaseapp.com/__/auth/handler",
-          "http://localhost"
-        ]
-      }
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "database": {
+      "port": 9000
+    },
+    "functions": {
+      "port": 5001
     }
   }
 }
