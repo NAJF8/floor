@@ -175,6 +175,13 @@ Production Firebase data, and it does not push or deploy either repository.
   Admin client no longer exposes delete/replace helpers; import/export remains
   merge-only. Functions tests and the Admin build passed, with no authenticated
   mutation runtime acceptance.
+- The `adminWrite` callable now validates critical Admin values server-side:
+  product prices/stock/status/recipes, inventory quantities, payment method
+  types, discount bounds, category fields, and delivery values. The repeatable
+  Emulator harness rejected a negative published product price, negative
+  inventory quantity, and unsupported payment type with `INVALID_ARGUMENT`,
+  while valid catalog writes and order approval continued to pass. This is
+  local callable evidence; Production deployment remains unverified.
 - Customer now reads `public/aiAssistant` settings for enablement, assistant
   name, welcome text, chips, and handoff text. It remains a configured
   conversational preview; no external AI/image-generation backend is called.
@@ -338,7 +345,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Admin order status controls | PASS (local callable); live UI NOT VERIFIED | Payment confirmation, approval, repeat approval, and unsafe transition rejection passed in the Emulator; live Admin controls remain unverified |
 | Order status state machine | PASS (local emulator + unit) | Callable runtime rejected `NEW -> DELIVERED`; dedicated payment confirmation and approval transitions were read back; live Admin acceptance remains unverified |
 | Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven; Production remains unverified |
-| Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
+| Admin mutation authorization | PASS (emulator only) | Manager write accepted, invalid financial/catalog values rejected, sensitive CVV rejected, Viewer write rejected; Production remains unverified |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
 | Staff UID membership linking | PASS (emulator only) | Auth UID lookup, membership/staff readback, non-Super Admin Super Admin assignment rejected |
