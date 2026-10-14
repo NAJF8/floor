@@ -392,6 +392,12 @@ Production Firebase data, and it does not push or deploy either repository.
   sensitive CVV input was rejected by the Admin callable. This is Emulator
   evidence; Admin browser behavior and Production Rules/deployment remain
   unverified.
+- The customer Emulator fixture now includes a synthetic bank-transfer method.
+  Customer Checkout rendered its bank name, account, IBAN, and instructions;
+  a synthetic bank order returned `PENDING_REVIEW`, and RTDB readback preserved
+  `BANK_TRANSFER`, reference `SYNTHETIC-BANK-REF-1`, and order status `NEW`.
+  The repeatable harness now asserts the same bank-transfer boundary alongside
+  ZainCash and Mastercard. No real banking data was used.
 - Combined Customer-to-Admin local browser acceptance also read back the
   approval side effects: product stock changed `4 -> 3`, ribbon inventory
   changed `3 -> 2`, and the reservation was `RESERVED`. This proves the local
@@ -451,7 +457,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, store-closure and province-payment enforcement, full retry readback, and owner-only access; Production callable is not deployed |
 | Customer cart/checkout wiring | PASS (local Emulator browser); Production NOT VERIFIED | CUA added two live Emulator products, read back `27,000` IQD subtotal, selected enabled delivery/payment, created a `31,000` IQD cash order, and rendered Account/Track Order; no deployed callable or Production checkout |
 | Coupon pricing and usage | PASS (unit + emulator) | 12 server pricing/state tests; emulator coupon and automatic-promotion totals, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
-| Payment methods | PASS (local backend + Emulator browser); Production NOT VERIFIED | Structured local editor, server-side province enforcement, cash order, enabled University delivery, and ZainCash wallet display; no Production mutation |
+| Payment methods | PASS (local backend + Emulator browser); Production NOT VERIFIED | Structured local editor, server-side province enforcement, cash order, enabled University delivery, ZainCash wallet, and synthetic bank-transfer instructions; no Production mutation |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Destructive admin deletes | PASS (local code/test boundary) | Callable rejects `delete`; category and collection UI use archive/disable updates; no live mutation acceptance |
 | Favorites | PASS (emulator + local browser) | Synthetic callable merge/readback plus CUA mobile detail toggle and `/favorites` readback; Google popup/live Production flow remains unverified |
@@ -492,7 +498,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | FAVORITES | PASS (Emulator + local browser) | Merge/readback and mobile detail toggle passed |
 | CART | PASS (local Emulator browser) | Two synthetic products rendered in the cart with a `27,000` IQD subtotal and authenticated checkout continued |
 | PAYMENT_METHODS | PASS (local backend + Emulator browser) | Cash/ZainCash enablement, University delivery selection, and wallet display passed locally |
-| BANK_TRANSFER | BUILD PASS; runtime NOT VERIFIED | Structured fields exist; no live authenticated session |
+| BANK_TRANSFER | PASS (Emulator + Customer browser); Production NOT VERIFIED | Checkout rendered synthetic bank/account/IBAN/instructions; created order stayed `PENDING_REVIEW` with `BANK_TRANSFER`, reference readback, and `NEW` status |
 | MASTERCARD_PAYMENT_INFO | PASS (Emulator safety) | Recipient fields read back; CVV rejected/not stored |
 | ZAINCASH | PASS (Emulator + local browser); Production NOT VERIFIED | Wallet number rendered in Customer Checkout and pending-review/transfer-reference backend readback passed |
 | CASH_PAYMENT | PASS (Emulator + local browser); Production NOT VERIFIED | Customer browser created `31,000` IQD order as `UNPAID`; backend confirmation and approval path also passed |
