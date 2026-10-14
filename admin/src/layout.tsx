@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import { useAdminSession } from './adminAuth'
+import { SHOP_ID } from './firebase'
+import { subscribeMap } from './rtdb'
 
 const links = [
   ['/', 'الرئيسية', 'home'], ['categories', 'الأقسام', 'grid'], ['products', 'المنتجات', 'box'], ['orders', 'الطلبات', 'cart'],
@@ -20,13 +22,15 @@ function Icon({ name }: { name: string }) {
 }
 
 export function AdminLayout() {
-  const session = useAdminSession(); const navigate = useNavigate(); const [menuOpen, setMenuOpen] = useState(false); const [dark, setDark] = useState(false); const [accountOpen, setAccountOpen] = useState(false); const [avatarFailed, setAvatarFailed] = useState(false)
+  const session = useAdminSession(); const navigate = useNavigate(); const [menuOpen, setMenuOpen] = useState(false); const [dark, setDark] = useState(false); const [accountOpen, setAccountOpen] = useState(false); const [avatarFailed, setAvatarFailed] = useState(false); const [settings, setSettings] = useState<Record<string, unknown>>({})
+  useEffect(() => subscribeMap<Record<string, unknown>>(`shops/${SHOP_ID}/public/settings`, setSettings), [])
   const closeMenu = () => setMenuOpen(false)
   const displayName = session.user?.displayName || session.user?.email?.split('@')[0] || 'مدير المتجر'
+  const configuredLogo = typeof settings.logoUrl === 'string' && /^(https?:\/\/|\/)/.test(settings.logoUrl.trim()) ? settings.logoUrl.trim() : `${import.meta.env.BASE_URL}alasas-logo.jpg`
   return <div className={`admin-shell${dark ? ' dark-mode' : ''}`}>
     {menuOpen && <button className="sidebar-backdrop" aria-label="إغلاق القائمة" onClick={closeMenu} />}
     <aside id="admin-sidebar" className={`sidebar${menuOpen ? ' is-open' : ''}`}>
-      <div className="sidebar-brand"><NavLink to="/" className="brand" onClick={closeMenu}><img src={`${import.meta.env.BASE_URL}alasas-logo.jpg`} alt="شعار الأساس" /></NavLink><button className="sidebar-collapse" aria-label="القائمة"><Icon name="menu" /></button></div>
+      <div className="sidebar-brand"><NavLink to="/" className="brand" onClick={closeMenu}><img src={configuredLogo} alt="شعار الأساس" /></NavLink><button className="sidebar-collapse" aria-label="القائمة"><Icon name="menu" /></button></div>
       <nav className="nav-list" aria-label="أقسام الإدارة">{links.map(([to, label, icon]) => <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'} onClick={closeMenu}><Icon name={icon} /><span>{label}</span></NavLink>)}</nav>
       <div className="sidebar-card"><img src={`${import.meta.env.BASE_URL}alasas-logo.jpg`} alt="" /><b>AL ASAS</b><small>من الأساس تبدأ الفكرة</small></div>
       <div className="sidebar-footer"><span className="session-name">{displayName}</span><small>{session.membership?.role || 'ADMIN'}</small><button onClick={async () => { await signOut(auth); closeMenu(); navigate('/') }}>تسجيل الخروج</button></div>

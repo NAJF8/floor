@@ -2,18 +2,21 @@ export const SHOP_ID = 'floor-232bc'
 export const DEMO_TAG = 'ALASAS_DEMO_V1'
 
 const images = [
-  'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=600&q=80',
-]
+  'photo-1490750967868-88aa4486c946', 'photo-1523438885200-e635ba2c371e', 'photo-1519225421980-715cb0215aed',
+  'photo-1526047932273-341f2a7631f9', 'photo-1508610048659-a06b669e3321', 'photo-1527061011665-3652c757a4d4',
+  'photo-1548094971-2e4a2a1f13a4', 'photo-1561181286-d3fee7d55364', 'photo-1606800052052-a08af7148866',
+  'photo-1513159446162-54eb8bdaa79b', 'photo-1522673607200-164d1b6ce486', 'photo-1518709268805-4e9042af9f23',
+  'photo-1495231916356-a86217efff12', 'photo-1509423350716-97f9360b4e09', 'photo-1497250681960-ef046c08a56e',
+  'photo-1501004318641-b39e6451bec6', 'photo-1455587734955-081b22074882', 'photo-1469259943454-aa100abba749',
+].map(id => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=600&q=80`)
 
 export const demoCategories = {
-  demoRoses: { name: 'باقات الورد', nameEn: 'Rose Bouquets', description: 'بيانات تجريبية معزولة للـEmulator.', order: 1, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
-  demoBoxes: { name: 'بوكسات الورد', nameEn: 'Flower Boxes', description: 'بيانات تجريبية معزولة للـEmulator.', order: 2, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
-  demoOccasions: { name: 'هدايا المناسبات', nameEn: 'Occasion Gifts', description: 'بيانات تجريبية معزولة للـEmulator.', order: 3, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
-  demoChocolate: { name: 'ورد مع شوكولاتة', nameEn: 'Flowers and Chocolate', description: 'بيانات تجريبية معزولة للـEmulator.', order: 4, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
-  demoGraduation: { name: 'ورد التخرج', nameEn: 'Graduation Flowers', description: 'بيانات تجريبية معزولة للـEmulator.', order: 5, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
-  demoLuxury: { name: 'تنسيقات فاخرة', nameEn: 'Luxury Arrangements', description: 'بيانات تجريبية معزولة للـEmulator.', order: 6, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
+  demoRoses: { name: 'باقات الورد', nameEn: 'Rose Bouquets', description: 'بيانات تجريبية معزولة للـEmulator.', image: images[0], order: 1, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
+  demoBoxes: { name: 'بوكسات الورد', nameEn: 'Flower Boxes', description: 'بيانات تجريبية معزولة للـEmulator.', image: images[1], order: 2, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
+  demoOccasions: { name: 'هدايا المناسبات', nameEn: 'Occasion Gifts', description: 'بيانات تجريبية معزولة للـEmulator.', image: images[2], order: 3, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
+  demoChocolate: { name: 'ورد مع شوكولاتة', nameEn: 'Flowers and Chocolate', description: 'بيانات تجريبية معزولة للـEmulator.', image: images[3], order: 4, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
+  demoGraduation: { name: 'ورد التخرج', nameEn: 'Graduation Flowers', description: 'بيانات تجريبية معزولة للـEmulator.', image: images[4], order: 5, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
+  demoLuxury: { name: 'تنسيقات فاخرة', nameEn: 'Luxury Arrangements', description: 'بيانات تجريبية معزولة للـEmulator.', image: images[5], order: 6, visible: true, status: 'PUBLISHED', demoTag: DEMO_TAG },
 }
 
 const productNames = [

@@ -287,7 +287,7 @@ export function ReportsPageEnhanced() {
 }
 function ReadOnlyPage({ title, eyebrow, description, path }: { title: string; eyebrow: string; description: string; path: string }) { const { items, error } = useMap<Row>(pathFor(path)); return <><Header eyebrow={eyebrow} title={title} description={description} /><RecordList title="البيانات الحالية" items={items} error={error} /></> }
 
-export function HomePage() { return <DocumentPage title="الصفحة الرئيسية" eyebrow="المحتوى" description="إدارة البنرات والمحتوى العام." path="public/homepage" fields={['heroTitle', 'heroDescription', 'bannerImage', 'featuredCategory']} /> }
+export function HomePage() { return <DocumentPage title="الصفحة الرئيسية" eyebrow="المحتوى" description="إدارة البنرات والوسائط العامة. تُحفظ الروابط والإعدادات في Firebase؛ رفع الفيديو عبر Worker غير متاح حتى يتم اعتماد تخزين مناسب." path="public/homepage" fields={['heroTitle', 'heroDescription', 'bannerImage', 'heroMediaType', 'heroMediaUrl', 'heroPosterUrl', 'heroVideoEnabled', 'heroFullWidth', 'heroObjectPositionDesktop', 'heroObjectPositionTablet', 'heroObjectPositionMobile', 'featuredCategory']} /> }
 export function SettingsPage() { return <StoreSettingsPage /> }
 function StoreSettingsPage() {
   const fullPath = pathFor('public/settings')

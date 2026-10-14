@@ -16,6 +16,11 @@ export type FlowerProductRecord = {
   packaging?: string
   colors?: string[]
   addOns?: string[]
+  flowerType?: string
+  occasions?: string[]
+  featured?: boolean
+  bestseller?: boolean
+  isNew?: boolean
   active?: boolean
   status?: string
   stock?: number
@@ -92,6 +97,11 @@ export function subscribeToShopProducts(
         ...(typeof record.packaging === 'string' ? { packaging: record.packaging } : {}),
         ...(Array.isArray(record.colors) ? { colors: record.colors.filter((item): item is string => typeof item === 'string') } : {}),
         ...(Array.isArray(record.addOns) ? { addOns: record.addOns.filter((item): item is string => typeof item === 'string') } : {}),
+        ...(typeof record.flowerType === 'string' ? { flowerType: record.flowerType } : {}),
+        ...(Array.isArray(record.occasions) ? { occasions: record.occasions.filter((item): item is string => typeof item === 'string') } : {}),
+        ...(record.featured === true ? { featured: true } : {}),
+        ...(record.bestseller === true ? { bestseller: true } : {}),
+        ...(record.isNew === true ? { isNew: true } : {}),
         ...(typeof record.status === 'string' ? { status: record.status } : {}),
         ...(typeof record.stock === 'number' ? { stock: record.stock } : {}),
         active: true,
