@@ -15,7 +15,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
     now ends at `d927309` after the verified local integration changes.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `d144f7e`, with a clean
+  - The isolated implementation branch now ends at `39db90a`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -137,6 +137,10 @@ Production Firebase data, and it does not push or deploy either repository.
   flags cleared, so copying a published product cannot publish or represent a
   sale automatically. The Admin build passed; authenticated readback remains
   unverified.
+- The Admin product form now offers local-only JPEG/PNG/WebP multi-file
+  selection with type, count, and 8MB-per-file validation. It explicitly does
+  not upload or save those files because no approved server-side GitHub service
+  exists; URL-based image fields remain the only persisted path.
 - Operational deletion controls now archive discounts and inventory materials,
   and disable delivery areas and payment methods while retaining their records.
   Approval also refuses archived/inactive inventory materials. Builds and
@@ -213,7 +217,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe archive, safe draft duplication, search/filter/sort, and status filtering are local-only; no Production write performed |
-| Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can store image URLs and Customer can switch among them; secure GitHub upload service is not present |
+| Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
 | Reports | BUILD PASS; runtime NOT VERIFIED | Derived financial/operational sections and local CSV export compile; no live Admin session readback |
