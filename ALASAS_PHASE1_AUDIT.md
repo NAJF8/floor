@@ -13,9 +13,10 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-  implementation commits are covered through `c21072c`; the branch also
-    contains the local customer/admin browser acceptance, the isolated
-    Auth/Database/Functions harness, and the current audit/status matrix.
+  The branch contains the local customer/admin browser acceptance, the
+  record-preserving Admin update fix, the isolated Auth/Database/Functions
+  harness, and the current audit/status matrix. Current branch evidence is
+  recorded by the final commit SHA reported with this audit.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `a7a70b8`, with a clean
     worktree after the verified local changes.
