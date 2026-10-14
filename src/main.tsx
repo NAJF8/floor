@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { HashRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Heart, Instagram, Menu, Minus, Package, Palette, Phone, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, X, Zap } from 'lucide-react'
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
@@ -285,7 +285,7 @@ function CheckoutConnected({ cart }: { cart: CartState }) {
     const productsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId} × ${item.quantity}` }).join('\n')
     const packagingText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId}: ${item.packagingColor || item.packaging || product?.packaging || 'غير محدد'}` }).join('\n')
     const addOnsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId}: ${item.addOns?.join('، ') || product?.addOns?.join('، ') || 'لا توجد'}` }).join('\n')
-    const trackingUrl = `${window.location.origin}${import.meta.env.BASE_URL}track-order?order=${encodeURIComponent(orderId)}`
+    const trackingUrl = `${window.location.origin}${import.meta.env.BASE_URL}#/track-order?order=${encodeURIComponent(orderId)}`
     const message = [`طلب جديد — ${String(publicConfig.settings.storeName || 'AL ASAS')}`, `رقم الطلب: ${orderId}`, `اسم الزبون: ${customerName}`, `رقم الهاتف: ${phone}`, `المستلم: ${recipientName}`, `المنتجات:\n${productsText}`, `التغليف:\n${packagingText}`, `الإضافات:\n${addOnsText}`, `رسالة الإهداء: ${giftMessage || 'لا توجد'}`, `المحافظة: ${province}`, `المنطقة: ${district}`, `العنوان: ${address}`, `موعد التوصيل: ${deliveryAt}`, `الإجمالي: ${money(total)}`, `طريقة الدفع: ${method.name}`, `مرجع التحويل: ${transferReference || 'لا يوجد'}`, `حالة الدفع: ${selectedPayment?.type === 'CASH' ? 'غير مدفوع' : 'بانتظار المراجعة'}`, `رابط الطلب: ${trackingUrl}`].join('\n')
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
   }
@@ -318,5 +318,5 @@ function EmptyState({ title, text, link }: { title: string; text: string; link?:
 function NotFound() { return <main className="page"><EmptyState title="هذه الصفحة غير موجودة" text="خلّينا نرجعك للمكان الصحيح." link="/" /></main> }
 function Footer() { const { live, error } = useCatalog(); const catalogStatus = error ? 'تعذر الاتصال بكتالوج Firebase' : live ? 'الكتالوج متصل ببيانات المتجر' : 'عرض تجريبي — لا توجد منتجات منشورة في Firebase'; return <footer className="footer"><div className="container footer-grid"><div className="footer-brand"><Link to="/" className="brand"><img src={logo} alt="الأساس" /><span><b>الأساس</b><small>من الأساس تبدأ الفكرة</small></span></Link><p>منصة تجارة الزهور والهدايا التي تعطي كل متجر مساحته الخاصة.</p><div className="socials"><Instagram size={17} /><Phone size={17} /><span>واتساب</span></div></div><div><h4>تسوّق</h4><Link to="/shop">كل المنتجات</Link><Link to="/shop?category=باقات الورد">باقات الورد</Link><Link to="/shop?category=بوكسات الهدايا">بوكسات الهدايا</Link><Link to="/design-your-bouquet">صمّم باقتك</Link></div><div><h4>المساعدة</h4><Link to="/track-order">تتبّع الطلب</Link><Link to="/account">حسابي</Link><a>معلومات التوصيل</a><a>الأسئلة الشائعة</a></div><div className="footer-contact"><h4>خلّينا على تواصل</h4><p>نرتبها سوا، من أول فكرة لآخر لمسة.</p><a href="tel:+9647700000000"><Phone size={15} /> +964 770 000 0000</a><a href="mailto:hello@alasas.example"><Send size={15} /> hello@alasas.example</a></div></div><div className="container footer-bottom"><span>© 2024 AL ASAS · {catalogStatus}</span><span>صنع بـ <span className="lime-text">●</span> في العراق</span></div></footer> }
 
-createRoot(document.getElementById('root')!).render(<BrowserRouter basename={import.meta.env.BASE_URL}><App /></BrowserRouter>)
+createRoot(document.getElementById('root')!).render(<HashRouter><App /></HashRouter>)
 

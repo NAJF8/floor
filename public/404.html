@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AL ASAS</title>
+  </head>
+  <body>
+    <p>جاري فتح الرابط…</p>
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var base = '/floor/';
+        if (path.indexOf(base) !== 0) return;
+        var route = path.slice(base.length).replace(/^\/+|\/+$/g, '');
+        if (!route || route.indexOf('admin') === 0) return;
+        var query = window.location.search || '';
+        var hash = '#/' + route + query + (window.location.hash ? window.location.hash : '');
+        window.location.replace(base + hash);
+      }());
+    </script>
+  </body>
+</html>
