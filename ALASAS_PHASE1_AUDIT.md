@@ -17,7 +17,8 @@ Production Firebase data, and it does not push or deploy either repository.
     update this audit and its master-prompt status matrix,
     configuration hygiene, delivery/payment UI boundary checks, and audit-only
     updates. The repeatable Auth/Database/Functions harness remains in the
-    same isolated branch.
+    same isolated branch; the latest customer acceptance-helper commit is
+    `f1355de`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `a7a70b8`, with a clean
     worktree after the verified local changes.
@@ -168,6 +169,15 @@ Production Firebase data, and it does not push or deploy either repository.
   dashboard and read back the synthetic product, category, order, automatic
   discount, cash payment, and reports data through `adminRead`. Production
   Google-authenticated acceptance remains unverified.
+- Customer browser acceptance is also proven locally with a synthetic Auth
+  Emulator account. The isolated browser loaded two published products, added
+  both to the cart (`27,000` IQD subtotal), showed only the enabled University
+  area (`4,000` IQD), rendered the synthetic ZainCash wallet, created a cash
+  order for `31,000` IQD with `UNPAID` readback, exposed a complete WhatsApp
+  `wa.me` URL containing the order/items/delivery/payment/tracking fields, and
+  then rendered the order in Account and Track Order. The WhatsApp URL was
+  inspected only; it was not opened or sent. The local login is gated by
+  `import.meta.env.DEV` and `VITE_USE_FIREBASE_EMULATORS=true`.
 - Admin product editing now exposes an `inventoryRecipe` JSON field with local
   validation for material IDs and positive integer quantities; it is wired to
   the same field consumed by approval-time inventory decrement logic. The
@@ -409,9 +419,9 @@ Production Firebase data, and it does not push or deploy either repository.
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, store-closure and province-payment enforcement, full retry readback, and owner-only access; Production callable is not deployed |
-| Customer cart/checkout wiring | PASS (local config/filter/review browser); callable Production NOT VERIFIED | CUA read back product/quantity/subtotal review, enabled delivery/payment configuration, and omitted disabled delivery; no deployed callable or authenticated live checkout |
+| Customer cart/checkout wiring | PASS (local Emulator browser); Production NOT VERIFIED | CUA added two live Emulator products, read back `27,000` IQD subtotal, selected enabled delivery/payment, created a `31,000` IQD cash order, and rendered Account/Track Order; no deployed callable or Production checkout |
 | Coupon pricing and usage | PASS (unit + emulator) | 12 server pricing/state tests; emulator coupon and automatic-promotion totals, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
-| Payment methods | PASS (local backend + config browser); Production NOT VERIFIED | Structured local editor, disable/archive behavior, server-side province enforcement, and province-aware customer display; no Production mutation or live browser acceptance |
+| Payment methods | PASS (local backend + Emulator browser); Production NOT VERIFIED | Structured local editor, server-side province enforcement, cash order, enabled University delivery, and ZainCash wallet display; no Production mutation |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Destructive admin deletes | PASS (local code/test boundary) | Callable rejects `delete`; category and collection UI use archive/disable updates; no live mutation acceptance |
 | Favorites | PASS (emulator + local browser) | Synthetic callable merge/readback plus CUA mobile detail toggle and `/favorites` readback; Google popup/live Production flow remains unverified |
@@ -450,13 +460,13 @@ Production Firebase data, and it does not push or deploy either repository.
 | INVENTORY_SYNC | PASS (Emulator only) | Concurrent approval reserved and decremented once |
 | DISCOUNTS | PASS (unit + Emulator) | Coupon and automatic promotion pricing/usage passed |
 | FAVORITES | PASS (Emulator + local browser) | Merge/readback and mobile detail toggle passed |
-| CART | PASS (local browser/build) | Multi-line cart model and checkout review compiled/rendered; live order not verified |
-| PAYMENT_METHODS | PASS (local backend + browser config) | Types, enablement, province enforcement and display passed locally |
+| CART | PASS (local Emulator browser) | Two synthetic products rendered in the cart with a `27,000` IQD subtotal and authenticated checkout continued |
+| PAYMENT_METHODS | PASS (local backend + Emulator browser) | Cash/ZainCash enablement, University delivery selection, and wallet display passed locally |
 | BANK_TRANSFER | BUILD PASS; runtime NOT VERIFIED | Structured fields exist; no live authenticated session |
 | MASTERCARD_PAYMENT_INFO | PASS (Emulator safety) | Recipient fields read back; CVV rejected/not stored |
-| ZAINCASH | PASS (Emulator only) | Pending review and transfer reference readback passed |
-| CASH_PAYMENT | PASS (Emulator only) | Unpaid creation, confirmation and approval path passed |
-| WHATSAPP_ORDER | BUILD PASS; runtime NOT VERIFIED | Message URL prepared; opening is not sending proof |
+| ZAINCASH | PASS (Emulator + local browser); Production NOT VERIFIED | Wallet number rendered in Customer Checkout and pending-review/transfer-reference backend readback passed |
+| CASH_PAYMENT | PASS (Emulator + local browser); Production NOT VERIFIED | Customer browser created `31,000` IQD order as `UNPAID`; backend confirmation and approval path also passed |
+| WHATSAPP_ORDER | PASS (local Emulator browser); Production NOT VERIFIED | Complete encoded `wa.me` URL rendered with order, items, delivery, payment, and tracking fields; URL was not opened or sent |
 | PAYMENT_CONFIRMATION | PASS (Emulator only) | Authorized confirmation and audit readback passed |
 | ADMIN_ORDER_APPROVAL | PASS (Emulator only) | Approval lock and repeat behavior passed |
 | WHATSAPP_APPROVAL_MESSAGE | BUILD PASS; runtime NOT VERIFIED | Approval URL/message preparation exists; no automatic sending |
@@ -467,5 +477,5 @@ Production Firebase data, and it does not push or deploy either repository.
 | REPORTS | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered derived reports; Production session not tested |
 | ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
 | IMPORT_EXPORT | BUILD PASS; runtime NOT VERIFIED | Merge-only validation compiled; no live Admin session |
-| LIVE_CUSTOMER_TEST | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered connected synthetic catalog/checkout/favorites |
+| LIVE_CUSTOMER_TEST | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered two-product catalog, cart total, delivery/payment choices, authenticated order creation, WhatsApp URL, Account order, and Track Order |
 | LIVE_ADMIN_TEST | PASS (local Emulator browser); Production NOT VERIFIED | Dev+Emulator-only synthetic Admin login rendered dashboard, products, categories, orders, discounts, payments, and reports; Google-authenticated Production acceptance was not performed |
