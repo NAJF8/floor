@@ -41,9 +41,10 @@ Production Firebase data, and it does not push or deploy either repository.
 
 - The clean customer worktree now subscribes to
   `shops/floor-232bc/products` and renders valid live records when present.
-- It accepts `imageUrls` and uses the first image for the catalog card/detail
-  view. If the live catalog is empty, the existing visual demo remains visible
-  and the footer explicitly states that no Firebase products are published.
+- It accepts `imageUrls`, uses the first image for cards, and now renders a
+  selectable multi-image gallery on the product detail page. If the live
+  catalog is empty, the existing visual demo remains visible and the footer
+  explicitly states that no Firebase products are published.
 - This change is local-only and has not been deployed or pushed.
 - The existing admin app reads/writes several paths, but its generic CRUD is not
   yet a complete order, payment, inventory, audit, or permission workflow.
@@ -198,6 +199,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe product archive, search/filter/sort, and status filtering are local-only; no Production write performed |
+| Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can store image URLs and Customer can switch among them; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
 | Reports | BUILD PASS; runtime NOT VERIFIED | Derived financial/operational sections and local CSV export compile; no live Admin session readback |
