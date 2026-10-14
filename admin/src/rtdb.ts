@@ -5,6 +5,7 @@ export const shopPath = (suffix: string) => `shops/${SHOP_ID}/${suffix}`
 
 const directRoots = [
   `shops/${SHOP_ID}/products`,
+  `shops/${SHOP_ID}/public/demoProducts`,
   `shops/${SHOP_ID}/public/categories`,
   `shops/${SHOP_ID}/public/discounts`,
   `shops/${SHOP_ID}/public/delivery`,
@@ -25,9 +26,18 @@ export function subscribeMap<T>(path: string, callback: (value: Record<string, T
 }
 
 export async function readValue<T>(path: string): Promise<T | null> { ensureDirectPath(path); const snapshot = await get(ref(getFirebaseDatabase(), path)); return snapshot.exists() ? snapshot.val() as T : null }
-export async function createRecord<T extends object>(path: string, value: T) { ensureDirectPath(path); const record = push(ref(getFirebaseDatabase(), path)); await update(ref(getFirebaseDatabase()), { [`${path}/${record.key}`]: value }); return record.key as string }
-export async function updateRecord(path: string, value: object) { ensureDirectPath(path); await update(ref(getFirebaseDatabase(), path), value) }
-export async function updatePaths(updates: Record<string, unknown>) { Object.keys(updates).forEach(ensureDirectPath); await update(ref(getFirebaseDatabase()), updates) }
-export async function createRecordWithPaths<T extends object>(path: string, value: T, extra: (id: string) => Record<string, unknown> = () => ({})) { ensureDirectPath(path); const record = push(ref(getFirebaseDatabase(), path)); await update(ref(getFirebaseDatabase()), { [`${path}/${record.key}`]: value, ...extra(record.key as string) }); return record.key as string }
+async function verifyReadback(path: string, expected: unknown) {
+  const snapshot = await get(ref(getFirebaseDatabase(), path))
+  if (expected === null) { if (snapshot.exists()) throw new Error(`Firebase readback failed: ${path} still exists.`); return }
+  if (!snapshot.exists()) throw new Error(`Firebase readback failed: ${path} is missing.`)
+  if (expected && typeof expected === 'object' && !Array.isArray(expected)) {
+    for (const [key, value] of Object.entries(expected as Record<string, unknown>)) if (JSON.stringify(snapshot.child(key).val()) !== JSON.stringify(value)) throw new Error(`Firebase readback failed: ${path}/${key}.`)
+  } else if (JSON.stringify(snapshot.val()) !== JSON.stringify(expected)) throw new Error(`Firebase readback failed: ${path}.`)
+}
+async function verifyPaths(updates: Record<string, unknown>) { await Promise.all(Object.entries(updates).map(([path, value]) => verifyReadback(path, value))) }
+export async function createRecord<T extends object>(path: string, value: T) { ensureDirectPath(path); const record = push(ref(getFirebaseDatabase(), path)); const target = `${path}/${record.key}`; await update(ref(getFirebaseDatabase()), { [target]: value }); await verifyReadback(target, value); return record.key as string }
+export async function updateRecord(path: string, value: object) { ensureDirectPath(path); await update(ref(getFirebaseDatabase(), path), value); await verifyReadback(path, value) }
+export async function updatePaths(updates: Record<string, unknown>) { Object.keys(updates).forEach(ensureDirectPath); await update(ref(getFirebaseDatabase()), updates); await verifyPaths(updates) }
+export async function createRecordWithPaths<T extends object>(path: string, value: T, extra: (id: string) => Record<string, unknown> = () => ({})) { ensureDirectPath(path); const record = push(ref(getFirebaseDatabase(), path)); const target = `${path}/${record.key}`; const updates = { [target]: value, ...extra(record.key as string) }; Object.keys(updates).forEach(ensureDirectPath); await update(ref(getFirebaseDatabase()), updates); await verifyPaths(updates); return record.key as string }
 export async function updateInventoryTransaction<T>(path: string, updater: (current: T | null) => T | null) { ensureDirectPath(path); const result = await runTransaction(ref(getFirebaseDatabase(), path), current => updater(current as T | null)); if (!result.committed) throw new Error('تعذر تثبيت تحديث المخزون بسبب تعارض متزامن.') }
 
