@@ -115,6 +115,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - Admin Reports now derives confirmed sales, confirmed non-cash transfers,
   uncollected cash, discounts, status counts, top products, provinces, low
   stock, employee activity, and a local CSV export from authorized reads.
+- Admin product editing now exposes an `inventoryRecipe` JSON field with local
+  validation for material IDs and positive integer quantities; it is wired to
+  the same field consumed by approval-time inventory decrement logic. The
+  editor build passed, but authenticated runtime readback remains unverified.
 - Customer now reads `public/aiAssistant` settings for enablement, assistant
   name, welcome text, chips, and handoff text. It remains a configured
   conversational preview; no external AI/image-generation backend is called.
@@ -185,7 +189,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
-| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor and status filtering are local-only; no Production write performed |
+| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, and status filtering are local-only; no Production write performed |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
 | Reports | BUILD PASS; runtime NOT VERIFIED | Derived financial/operational sections and local CSV export compile; no live Admin session readback |
