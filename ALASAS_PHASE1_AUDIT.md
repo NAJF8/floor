@@ -103,6 +103,9 @@ Production Firebase data, and it does not push or deploy either repository.
   yesterday, week, month, previous month, all-time, and custom date windows,
   plus a seven-day sales chart. It is still local-only and has no live
   authenticated browser acceptance yet.
+- Admin Reports now derives confirmed sales, confirmed non-cash transfers,
+  uncollected cash, discounts, status counts, top products, provinces, low
+  stock, employee activity, and a local CSV export from authorized reads.
 - Both web clients now support an explicit local-only
   `VITE_USE_FIREBASE_EMULATORS=true` switch for Auth/RTDB/Functions testing;
   the default build keeps the existing Firebase project configuration.
@@ -172,6 +175,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor and status filtering are local-only; no Production write performed |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
+| Reports | BUILD PASS; runtime NOT VERIFIED | Derived financial/operational sections and local CSV export compile; no live Admin session readback |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Live product IDs/config and callable client are wired; no deployed callable or authenticated browser acceptance |
