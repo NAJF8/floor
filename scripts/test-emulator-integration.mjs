@@ -1,0 +1,224 @@
+import assert from 'node:assert/strict'
+import { deleteApp, initializeApp } from 'firebase-admin/app'
+import { getDatabase } from 'firebase-admin/database'
+import { deleteApp as deleteClientApp, initializeApp as initializeClientApp } from 'firebase/app'
+import { connectAuthEmulator, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { connectDatabaseEmulator, get as clientGet, getDatabase as getClientDatabase, ref as clientRef, set as clientSet } from 'firebase/database'
+
+const SHOP_ID = 'floor-232bc'
+const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST || ''
+const functionsHost = process.env.FUNCTIONS_EMULATOR_HOST || '127.0.0.1:5001'
+const namespace = process.env.FIREBASE_DATABASE_EMULATOR_NAMESPACE || `${SHOP_ID}-default-rtdb`
+
+if (!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(host)) throw new Error('Refusing to run without a local Database Emulator.')
+if (!/^(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(functionsHost)) throw new Error('Refusing to run without a local Functions Emulator.')
+
+const app = initializeApp({ projectId: SHOP_ID, databaseURL: `http://${host}?ns=${namespace}` }, `integration-${Date.now()}`)
+const database = getDatabase(app)
+
+async function responseJson(response) {
+  const text = await response.text()
+  let body = null
+  try { body = JSON.parse(text) } catch { /* retain raw response in the error */ }
+  return { response, body, text }
+}
+
+async function signUp(label) {
+  const email = `${label}-${Date.now()}@example.test`
+  const password = 'LocalOnly-123456'
+  const response = await fetch(`http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password, returnSecureToken: true }),
+  })
+  const { body, text } = await responseJson(response)
+  if (!response.ok || !body?.idToken || !body?.localId) throw new Error(`Auth emulator signup failed (${response.status}): ${text}`)
+  return { uid: body.localId, token: body.idToken, email, password }
+}
+
+async function callFunction(name, token, data) {
+  const response = await fetch(`http://${functionsHost}/${SHOP_ID}/europe-west1/${name}`, {
+    method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ data }),
+  })
+  const { body, text } = await responseJson(response)
+  if (!response.ok || body?.error) throw new Error(`${name} failed (${response.status}): ${text}`)
+  return body.result
+}
+
+async function expectFunctionError(name, token, data, expectedStatus) {
+  const response = await fetch(`http://${functionsHost}/${SHOP_ID}/europe-west1/${name}`, {
+    method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ data }),
+  })
+  const { body, text } = await responseJson(response)
+  assert.equal(body?.error?.status, expectedStatus, `${name} returned an unexpected error: ${text}`)
+}
+
+async function clientWrite(user, path, value) {
+  const clientApp = initializeClientApp({ apiKey: 'local-emulator-key', authDomain: 'localhost', databaseURL: `http://${host}?ns=${namespace}`, projectId: SHOP_ID }, `rules-client-${Date.now()}-${Math.random()}`)
+  const clientAuth = getAuth(clientApp)
+  const clientDatabase = getClientDatabase(clientApp)
+  connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectDatabaseEmulator(clientDatabase, '127.0.0.1', 9000)
+  try {
+    await signInWithEmailAndPassword(clientAuth, user.email, user.password)
+    await clientSet(clientRef(clientDatabase, path), value)
+    return 'WRITE_SUCCEEDED'
+  } catch (error) {
+    const message = String(error?.message || error)
+    return error?.code || (message.toLowerCase().includes('permission denied') ? 'PERMISSION_DENIED' : message)
+  } finally {
+    await signOut(clientAuth).catch(() => undefined)
+    await deleteClientApp(clientApp)
+  }
+}
+
+async function clientRead(user, path) {
+  const clientApp = initializeClientApp({ apiKey: 'local-emulator-key', authDomain: 'localhost', databaseURL: `http://${host}?ns=${namespace}`, projectId: SHOP_ID }, `rules-read-client-${Date.now()}-${Math.random()}`)
+  const clientAuth = getAuth(clientApp)
+  const clientDatabase = getClientDatabase(clientApp)
+  connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectDatabaseEmulator(clientDatabase, '127.0.0.1', 9000)
+  try {
+    await signInWithEmailAndPassword(clientAuth, user.email, user.password)
+    await clientGet(clientRef(clientDatabase, path))
+    return 'READ_SUCCEEDED'
+  } catch (error) {
+    const message = String(error?.message || error)
+    return error?.code || (message.toLowerCase().includes('permission denied') ? 'PERMISSION_DENIED' : message)
+  } finally {
+    await signOut(clientAuth).catch(() => undefined)
+    await deleteClientApp(clientApp)
+  }
+}
+
+const root = database.ref(`shops/${SHOP_ID}`)
+try {
+  const customer = await signUp('customer')
+  const admin = await signUp('admin')
+  const otherCustomer = await signUp('other')
+  const staff = await signUp('staff')
+  const viewer = await signUp('viewer')
+  await database.ref(`shopMemberships/${admin.uid}/${SHOP_ID}`).set({ role: 'ADMIN', active: true, permissions: { orders: true, products: true, inventory: true, catalog: true, staff: true, audit: true, settings: true } })
+  await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { catalog: true } })
+  await root.set({
+    products: { rose: { name: 'Synthetic rose', price: 40000, category: 'roses', status: 'PUBLISHED', active: true, stock: 2, inventoryRecipe: { wrap: 1 } } },
+    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, restricted: { name: 'Baghdad-only cash', type: 'CASH', enabled: true, provinces: ['Baghdad'] }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, bank: { name: 'Synthetic Bank Transfer', type: 'BANK_TRANSFER', enabled: true, bankName: 'Synthetic Bank', accountName: 'Synthetic Receiver', accountNumber: 'SYNTHETIC-ACCOUNT-1', iban: 'SYNTHETIC-IBAN-1', instructions: 'Synthetic bank instructions' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: { synthetic: { name: 'Synthetic ten percent', code: 'SYN10', scope: 'ALL', discountType: 'PERCENT', value: 10, maxUses: 1, active: true }, automatic: { name: 'Synthetic automatic roses offer', code: '', scope: 'CATEGORY', categoryId: 'roses', discountType: 'FIXED', value: 3000, maxUses: 1, active: true } } },
+    private: { inventory: { wrap: { name: 'Synthetic wrap', quantity: 3, active: true, status: 'ACTIVE' } } },
+  })
+
+  await callFunction('setStaffMembership', admin.token, { uid: staff.uid, email: staff.email, displayName: 'Synthetic Staff', role: 'EMPLOYEE', active: true, permissions: { catalog: true, products: false, orders: false, inventory: false, customers: false, audit: false, settings: false, staff: false } })
+  const staffMembership = await database.ref(`shopMemberships/${staff.uid}/${SHOP_ID}`).get()
+  const staffRecord = await root.child(`private/staff/${staff.uid}`).get()
+  assert.equal(staffMembership.val().role, 'EMPLOYEE')
+  assert.equal(staffMembership.val().permissions.products, false)
+  assert.equal(staffRecord.val().email, staff.email)
+  const authenticatedPrivateWriteStatus = await clientWrite(customer, `shops/${SHOP_ID}/private/orders/direct-probe`, { probe: true })
+  const authenticatedUserWriteStatus = await clientWrite(customer, `users/${customer.uid}/favorites/direct-probe`, true)
+  const ownUserReadStatus = await clientRead(customer, `users/${customer.uid}`)
+  const otherUserReadStatus = await clientRead(customer, `users/${otherCustomer.uid}`)
+  const privateReadStatus = await clientRead(customer, `shops/${SHOP_ID}/private/orders`)
+  assert.equal(authenticatedPrivateWriteStatus, 'PERMISSION_DENIED')
+  assert.equal(authenticatedUserWriteStatus, 'PERMISSION_DENIED')
+  assert.equal(ownUserReadStatus, 'READ_SUCCEEDED')
+  assert.equal(otherUserReadStatus, 'PERMISSION_DENIED')
+  assert.equal(privateReadStatus, 'PERMISSION_DENIED')
+  await expectFunctionError('getCustomerOrder', customer.token, { orderId: '../users' }, 'INVALID_ARGUMENT')
+  const mergedFavorites = await callFunction('syncCustomerFavorites', customer.token, { favoriteIds: ['rose', 'gift-box'], replace: false })
+  assert.deepEqual(new Set(mergedFavorites.favoriteIds), new Set(['rose', 'gift-box']))
+  const replacedFavorites = await callFunction('syncCustomerFavorites', customer.token, { favoriteIds: ['rose'], replace: true })
+  assert.deepEqual(replacedFavorites.favoriteIds, ['rose'])
+  const favoritesReadback = await root.parent.parent.child(`users/${customer.uid}/favorites`).get()
+  assert.deepEqual(Object.keys(favoritesReadback.val() || {}), ['rose'])
+  await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/products`, value: { name: 'Invalid product', category: 'synthetic', price: -1, status: 'PUBLISHED', active: true } }, 'INVALID_ARGUMENT')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/private/inventory/wrap`, value: { quantity: -1 } }, 'INVALID_ARGUMENT')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/paymentMethods`, value: { name: 'Invalid payment', type: 'CARD', enabled: true } }, 'INVALID_ARGUMENT')
+  await expectFunctionError('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/paymentMethods`, value: { name: 'Sensitive payment', type: 'MASTERCARD', enabled: true, cvv: '123' } }, 'INVALID_ARGUMENT')
+
+  const category = await callFunction('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Synthetic category', visible: true, active: true } })
+  assert.match(category.key, /^[A-Za-z0-9_-]+$/)
+  const product = await callFunction('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/products`, value: { name: 'Synthetic catalog product', price: 12000, status: 'DRAFT', active: false, category: category.key, imageUrls: ['https://example.test/synthetic.jpg'] } })
+  assert.match(product.key, /^[A-Za-z0-9_-]+$/)
+  const productsRead = await callFunction('adminRead', admin.token, { path: `shops/${SHOP_ID}/products` })
+  assert.equal(productsRead.data[product.key].status, 'DRAFT')
+  assert.deepEqual(productsRead.data[product.key].imageUrls, ['https://example.test/synthetic.jpg'])
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/products/${product.key}`, value: { price: 13000, imageUrls: ['https://example.test/synthetic.jpg', 'https://example.test/synthetic-2.jpg'] } })
+  const updatedProduct = await callFunction('adminRead', admin.token, { path: `shops/${SHOP_ID}/products/${product.key}` })
+  assert.equal(updatedProduct.data.price, 13000)
+  assert.deepEqual(updatedProduct.data.imageUrls, ['https://example.test/synthetic.jpg', 'https://example.test/synthetic-2.jpg'])
+  assert.equal(updatedProduct.data.name, 'Synthetic catalog product')
+  assert.equal(updatedProduct.data.category, category.key)
+  assert.equal(updatedProduct.data.status, 'DRAFT')
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/public/categories/${category.key}`, value: { visible: false, active: false, status: 'ARCHIVED' } })
+  const archivedCategory = await root.child(`public/categories/${category.key}`).get()
+  assert.equal(archivedCategory.val().status, 'ARCHIVED')
+  assert.equal((await root.child(`products/${product.key}`).get()).exists(), true)
+  await expectFunctionError('adminWrite', admin.token, { operation: 'delete', path: `shops/${SHOP_ID}/products/${product.key}` }, 'FAILED_PRECONDITION')
+  await expectFunctionError('adminWrite', viewer.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Unauthorized synthetic category' } }, 'PERMISSION_DENIED')
+
+  const input = { items: [{ productId: 'rose', quantity: 1, packaging: 'Premium wrap', addOns: ['Ribbon'], giftMessage: 'Local test' }], customerName: 'Synthetic Customer', phone: '07700000000', recipientName: 'Synthetic Recipient', recipientPhone: '07700000001', province: 'Najaf', district: 'University', address: 'Local emulator only', deliveryAt: '2026-10-20T12:00', paymentMethodId: 'cash', idempotencyKey: 'local-integration-order-1' }
+  await expectFunctionError('createOrder', customer.token, { ...input, idempotencyKey: '../orders' }, 'FAILED_PRECONDITION')
+  await expectFunctionError('createOrder', customer.token, { ...input, district: 'ClosedArea', idempotencyKey: 'local-integration-disabled-delivery' }, 'FAILED_PRECONDITION')
+  await expectFunctionError('createOrder', customer.token, { ...input, paymentMethodId: 'restricted', idempotencyKey: 'local-integration-unsupported-payment' }, 'FAILED_PRECONDITION')
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/public/settings`, value: { acceptingOrders: false } })
+  await expectFunctionError('createOrder', customer.token, { ...input, idempotencyKey: 'local-integration-closed-store' }, 'FAILED_PRECONDITION')
+  await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/public/settings`, value: { acceptingOrders: true } })
+  const automaticPromotionOrder = await callFunction('createOrder', customer.token, { ...input, idempotencyKey: 'local-integration-automatic-promotion' })
+  assert.equal(automaticPromotionOrder.total, 42000)
+  const couponOrder = await callFunction('createOrder', customer.token, { ...input, couponCode: 'SYN10', idempotencyKey: 'local-integration-coupon' })
+  assert.equal(couponOrder.total, 41000)
+  assert.equal(couponOrder.paymentStatus, 'UNPAID')
+  await expectFunctionError('createOrder', customer.token, { ...input, couponCode: 'SYN10', idempotencyKey: 'local-integration-coupon-exhausted' }, 'FAILED_PRECONDITION')
+  const created = await callFunction('createOrder', customer.token, input)
+  assert.equal(created.paymentStatus, 'UNPAID')
+  assert.equal(created.total, 45000)
+  const retry = await callFunction('createOrder', customer.token, input)
+  assert.equal(retry.orderId, created.orderId)
+  assert.equal(retry.reused, true)
+  assert.equal(retry.total, created.total)
+  assert.equal(retry.paymentStatus, created.paymentStatus)
+  const ownerOrder = await callFunction('getCustomerOrder', customer.token, { orderId: created.orderId })
+  assert.equal(ownerOrder.orderId, created.orderId)
+  await expectFunctionError('getCustomerOrder', otherCustomer.token, { orderId: created.orderId }, 'NOT_FOUND')
+  await callFunction('confirmOrderPayment', admin.token, { orderId: created.orderId })
+  const approvalAttempts = await Promise.allSettled([
+    callFunction('approveOrder', admin.token, { orderId: created.orderId }),
+    callFunction('approveOrder', admin.token, { orderId: created.orderId }),
+  ])
+  const approvalValues = approvalAttempts.filter((attempt) => attempt.status === 'fulfilled').map((attempt) => attempt.value)
+  assert.equal(approvalValues.filter((value) => value.reused !== true).length, 1)
+  for (const attempt of approvalAttempts.filter((item) => item.status === 'rejected')) {
+    assert.match(String(attempt.reason?.message || attempt.reason), /ABORTED|busy|Inventory is busy/i)
+  }
+  const approved = approvalValues.find((value) => value.reused !== true)
+  assert.equal(approved.orderStatus, 'APPROVED')
+  const repeatApproval = await callFunction('approveOrder', admin.token, { orderId: created.orderId })
+  assert.equal(repeatApproval.reused, true)
+  await expectFunctionError('setOrderStatus', admin.token, { orderId: created.orderId, orderStatus: 'DELIVERED' }, 'FAILED_PRECONDITION')
+
+  const [orderSnapshot, productSnapshot, inventorySnapshot, reservationSnapshot] = await Promise.all([
+    root.child(`private/orders/${created.orderId}`).get(), root.child('products/rose').get(), root.child('private/inventory/wrap').get(), root.child(`private/orderReservations/${created.orderId}`).get(),
+  ])
+  assert.equal(orderSnapshot.val().orderStatus, 'APPROVED')
+  assert.equal(orderSnapshot.val().paymentStatus, 'CONFIRMED')
+  assert.equal(productSnapshot.val().stock, 1)
+  assert.equal(inventorySnapshot.val().quantity, 2)
+  assert.equal(reservationSnapshot.val().status, 'RESERVED')
+  const transferOrder = await callFunction('createOrder', customer.token, { ...input, paymentMethodId: 'zain', transferReference: 'SYNTHETIC-REF-1', idempotencyKey: 'local-integration-order-2' })
+  assert.equal(transferOrder.paymentStatus, 'PENDING_REVIEW')
+  const transferSnapshot = await root.child(`private/orders/${transferOrder.orderId}`).get()
+  assert.equal(transferSnapshot.val().transferReference, 'SYNTHETIC-REF-1')
+  const bankOrder = await callFunction('createOrder', customer.token, { ...input, paymentMethodId: 'bank', transferReference: 'SYNTHETIC-BANK-REF-1', idempotencyKey: 'local-integration-order-bank' })
+  assert.equal(bankOrder.paymentStatus, 'PENDING_REVIEW')
+  const bankSnapshot = await root.child(`private/orders/${bankOrder.orderId}`).get()
+  assert.equal(bankSnapshot.val().paymentMethod.type, 'BANK_TRANSFER')
+  assert.equal(bankSnapshot.val().transferReference, 'SYNTHETIC-BANK-REF-1')
+  assert.equal(bankSnapshot.val().orderStatus, 'NEW')
+  const mastercardOrder = await callFunction('createOrder', customer.token, { ...input, paymentMethodId: 'mastercard', idempotencyKey: 'local-integration-order-3' })
+  assert.equal(mastercardOrder.paymentStatus, 'PENDING_REVIEW')
+  const mastercardSnapshot = await root.child(`private/orders/${mastercardOrder.orderId}`).get()
+  assert.equal(mastercardSnapshot.val().paymentMethod.type, 'MASTERCARD')
+  assert.equal(mastercardSnapshot.val().paymentMethod.cvv, undefined)
+  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, automaticPromotionTotal: automaticPromotionOrder.total, couponTotal: couponOrder.total, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, ownUserReadStatus, otherUserReadStatus, privateReadStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference, bankOrderStatus: bankOrder.paymentStatus, bankReferenceReadback: bankSnapshot.val().transferReference, mastercardOrderStatus: mastercardOrder.paymentStatus, mastercardTypeReadback: mastercardSnapshot.val().paymentMethod.type, mastercardCvvReadback: mastercardSnapshot.val().paymentMethod.cvv ?? null, multiImageCount: updatedProduct.data.imageUrls.length, updatedProductPrice: updatedProduct.data.price }, null, 2))
+} finally {
+  await root.remove()
+  await database.ref('shopMemberships').remove()
+  await deleteApp(app)
+}

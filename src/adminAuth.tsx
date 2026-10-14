@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { get, ref } from 'firebase/database'
-import { auth, database, googleProvider, SHOP_ID } from './firebase'
+import { firebaseAuth, firebaseDatabase, googleProvider, SHOP_ID } from './firebase'
 
 type AdminMembership = {
   uid?: string
@@ -23,14 +23,14 @@ const initialState: SessionState = { loading: true, user: null, membership: null
 function useAdminSession() {
   const [state, setState] = useState<SessionState>(initialState)
 
-  useEffect(() => onAuthStateChanged(auth, async (user) => {
+  useEffect(() => onAuthStateChanged(firebaseAuth, async (user) => {
     if (!user) {
       setState({ loading: false, user: null, membership: null, error: '' })
       return
     }
 
     try {
-      const snapshot = await get(ref(database, `shopMemberships/${user.uid}/${SHOP_ID}`))
+      const snapshot = await get(ref(firebaseDatabase, `shopMemberships/${user.uid}/${SHOP_ID}`))
       setState({
         loading: false,
         user,
@@ -58,7 +58,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
     setBusy(true)
     setActionError('')
     try {
-      await signInWithPopup(auth, googleProvider)
+      await signInWithPopup(firebaseAuth, googleProvider)
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'تعذر تسجيل الدخول عبر Google.')
     } finally {
@@ -78,7 +78,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
 
   const googleAccount = state.user.providerData.some((provider) => provider.providerId === 'google.com')
   const verifiedEmail = state.user.emailVerified && Boolean(state.user.email)
-  const authorized = googleAccount && verifiedEmail && state.membership?.role === 'SUPER_ADMIN' && state.membership.active === true
+  const authorized = googleAccount && verifiedEmail && state.membership?.active === true && ['SUPER_ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || '')
 
   if (!authorized) return <AuthMessage>
     <div className="eyebrow">تم التعرف على الحساب</div>
@@ -87,7 +87,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
     <p>Firebase UID الموثق: <code>{state.user.uid}</code></p>
     <p>لا يتم منح الدور من البريد أو من المتصفح. يجب إنشاء عضوية هذا UID عبر عملية provisioning موثوقة.</p>
     {state.error && <p className="auth-error">{state.error}</p>}
-    <button className="btn btn-light full" onClick={() => signOut(auth)}>تسجيل الخروج</button>
+    <button className="btn btn-light full" onClick={() => signOut(firebaseAuth)}>تسجيل الخروج</button>
   </AuthMessage>
 
   return <>{children}</>
