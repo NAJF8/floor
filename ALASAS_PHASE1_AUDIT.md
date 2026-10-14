@@ -12,10 +12,11 @@ Production Firebase data, and it does not push or deploy either repository.
 - Customer working checkout: `C:\Users\MSI\Desktop\floor`
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
-  - A clean implementation worktree was created from `origin/main` at
-    `46dab86` under `.codex/worktrees/alasas-commerce-phase1/floor`.
+  - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
+    now ends at `d927309` after the verified local integration changes.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - `main` at `864b0d7`, clean after clone.
+  - The isolated implementation branch now ends at `d144f7e`, with a clean
+    worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
 - The admin build completed successfully. The customer dependency audit reports
@@ -221,7 +222,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Product IDs/config, persisted cart options, and callable sanitization are wired; no deployed callable or authenticated browser acceptance |
-| Coupon pricing and usage | PASS (unit + emulator) | 7 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
+| Coupon pricing and usage | PASS (unit + emulator) | 8 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
 | Favorites | PASS (emulator only) | Local visitor storage plus authenticated callable merge/readback; Google popup/live Production flow remains unverified |
