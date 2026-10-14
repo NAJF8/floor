@@ -235,7 +235,9 @@ export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: fals
   }
   if (operation === 'update') {
     if (!request.data?.value || typeof request.data.value !== 'object' || Array.isArray(request.data.value)) throw new HttpsError('invalid-argument', 'Update data must be an object.')
-    const updates = { [path]: { ...request.data.value, updatedAt: now }, [activityPath()]: audit(target.key) }
+    const currentSnapshot = await target.get()
+    const current = currentSnapshot.exists() && currentSnapshot.val() && typeof currentSnapshot.val() === 'object' && !Array.isArray(currentSnapshot.val()) ? currentSnapshot.val() : {}
+    const updates = { [path]: { ...current, ...request.data.value, updatedAt: now }, [activityPath()]: audit(target.key) }
     await database.ref().update(updates)
     return { actorUid: actor.uid }
   }
