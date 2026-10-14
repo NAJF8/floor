@@ -97,7 +97,7 @@ try {
   const staff = await signUp('staff')
   const viewer = await signUp('viewer')
   await database.ref(`shopMemberships/${admin.uid}/${SHOP_ID}`).set({ role: 'ADMIN', active: true, permissions: { orders: true, products: true, inventory: true, catalog: true, staff: true, audit: true, settings: true } })
-  await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { catalog: true } })
+  await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { products: true, catalog: true, orders: true, inventory: true, customers: true, audit: true, settings: false, staff: false } })
   await root.set({
     products: { rose: { name: 'Synthetic rose', price: 40000, category: 'roses', status: 'PUBLISHED', active: true, stock: 2, inventoryRecipe: { wrap: 1 } } },
     public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, restricted: { name: 'Baghdad-only cash', type: 'CASH', enabled: true, provinces: ['Baghdad'] }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' }, bank: { name: 'Synthetic Bank Transfer', type: 'BANK_TRANSFER', enabled: true, bankName: 'Synthetic Bank', accountName: 'Synthetic Receiver', accountNumber: 'SYNTHETIC-ACCOUNT-1', iban: 'SYNTHETIC-IBAN-1', instructions: 'Synthetic bank instructions' }, mastercard: { name: 'Synthetic Mastercard', type: 'MASTERCARD', enabled: true, recipient: 'Synthetic receiver', instructions: 'Synthetic gateway instructions' } }, discounts: { synthetic: { name: 'Synthetic ten percent', code: 'SYN10', scope: 'ALL', discountType: 'PERCENT', value: 10, maxUses: 1, active: true }, automatic: { name: 'Synthetic automatic roses offer', code: '', scope: 'CATEGORY', categoryId: 'roses', discountType: 'FIXED', value: 3000, maxUses: 1, active: true } } },
@@ -139,6 +139,8 @@ try {
   const productsRead = await callFunction('adminRead', admin.token, { path: `shops/${SHOP_ID}/products` })
   assert.equal(productsRead.data[product.key].status, 'DRAFT')
   assert.deepEqual(productsRead.data[product.key].imageUrls, ['https://example.test/synthetic.jpg'])
+  const viewerProductsRead = await callFunction('adminRead', viewer.token, { path: `shops/${SHOP_ID}/products` })
+  assert.equal(viewerProductsRead.data[product.key].name, 'Synthetic catalog product')
   await callFunction('adminWrite', admin.token, { operation: 'update', path: `shops/${SHOP_ID}/products/${product.key}`, value: { price: 13000, imageUrls: ['https://example.test/synthetic.jpg', 'https://example.test/synthetic-2.jpg'] } })
   const updatedProduct = await callFunction('adminRead', admin.token, { path: `shops/${SHOP_ID}/products/${product.key}` })
   assert.equal(updatedProduct.data.price, 13000)

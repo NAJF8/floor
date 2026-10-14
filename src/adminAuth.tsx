@@ -78,7 +78,7 @@ export function AdminGate({ children }: { children: ReactNode }) {
 
   const googleAccount = state.user.providerData.some((provider) => provider.providerId === 'google.com')
   const verifiedEmail = state.user.emailVerified && Boolean(state.user.email)
-  const authorized = googleAccount && verifiedEmail && state.membership?.active === true && ['SUPER_ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || '')
+  const authorized = googleAccount && verifiedEmail && state.membership?.active === true && ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || '')
 
   if (!authorized) return <AuthMessage>
     <div className="eyebrow">تم التعرف على الحساب</div>

@@ -32,7 +32,7 @@ async function requireStaff(request, permission, minimumRole = 'EMPLOYEE') {
   if (!emulatorMode && token.email_verified === false) throw new HttpsError('permission-denied', 'A verified administrator account is required.')
   const membership = (await database.ref(`shopMemberships/${uid}/${SHOP_ID}`).get()).val()
   const role = membership?.role
-  if (membership?.active !== true || !role || (roleOrder[role] || -1) < (roleOrder[minimumRole] || 0)) {
+  if (membership?.active !== true || !role || (roleOrder[role] ?? -1) < (roleOrder[minimumRole] ?? 0)) {
     throw new HttpsError('permission-denied', 'This account is not authorized for this operation.')
   }
   if (role !== 'SUPER_ADMIN' && membership.permissions && membership.permissions[permission] === false) {
@@ -43,6 +43,12 @@ async function requireStaff(request, permission, minimumRole = 'EMPLOYEE') {
 
 function orderPath(orderId) { return `shops/${SHOP_ID}/private/orders/${orderId}` }
 function activityPath() { return `shops/${SHOP_ID}/private/activityLogs/${database.ref().push().key}` }
+function normalizeEmail(value) {
+  if (typeof value !== 'string' || value.trim().length === 0 || value.length > 254) throw new HttpsError('invalid-argument', 'A valid email address is required.')
+  const email = value.trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError('invalid-argument', 'A valid email address is required.')
+  return email
+}
 function idText(value, field) {
   if (typeof value !== 'string' || value.trim().length === 0 || value.length > 120) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
   return value.trim()
@@ -69,12 +75,13 @@ function adminReadPolicy(path) {
   const prefix = `shops/${SHOP_ID}/`
   if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..') || path.includes('//')) throw new HttpsError('invalid-argument', 'Invalid administrative path.')
   const suffix = path.slice(prefix.length)
-  if (suffix === 'products' || suffix.startsWith('products/')) return { permission: 'products', minimumRole: 'EMPLOYEE' }
-  if (suffix === 'private/orders' || suffix.startsWith('private/orders/')) return { permission: 'orders', minimumRole: 'EMPLOYEE' }
-  if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'EMPLOYEE' }
+  if (suffix === 'products' || suffix.startsWith('products/')) return { permission: 'products', minimumRole: 'VIEWER' }
+  if (suffix === 'private/orders' || suffix.startsWith('private/orders/')) return { permission: 'orders', minimumRole: 'VIEWER' }
+  if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'VIEWER' }
   if (suffix === 'private/customers' || suffix.startsWith('private/customers/')) return { permission: 'customers', minimumRole: 'MANAGER' }
   if (suffix === 'private/activityLogs' || suffix.startsWith('private/activityLogs/')) return { permission: 'audit', minimumRole: 'MANAGER' }
   if (suffix === 'private/staff' || suffix.startsWith('private/staff/')) return { permission: 'staff', minimumRole: 'ADMIN' }
+  if (suffix === 'private/staffInvitations' || suffix.startsWith('private/staffInvitations/')) return { permission: 'staff', minimumRole: 'ADMIN' }
   if (suffix === 'private/payments' || suffix.startsWith('private/payments/')) return { permission: 'orders', minimumRole: 'MANAGER' }
   throw new HttpsError('permission-denied', 'This private path is not readable from the admin client.')
 }
@@ -264,12 +271,14 @@ export const setStaffMembership = onCall({ region: 'europe-west1', enforceAppChe
   if (request.data?.email && request.data.email !== authUser.email) throw new HttpsError('failed-precondition', 'The supplied email does not match the Firebase UID.')
   const membershipRef = database.ref(`shopMemberships/${uid}/${SHOP_ID}`)
   const current = (await membershipRef.get()).val()
-  if (current?.immutableBootstrap && (current.role !== role || current.active !== request.data?.active)) throw new HttpsError('permission-denied', 'Bootstrap Super Admin membership is immutable.')
+  if (current?.immutableBootstrap) throw new HttpsError('permission-denied', 'Bootstrap Super Admin membership is immutable.')
+  if (current?.role === 'SUPER_ADMIN' && actor.role !== 'SUPER_ADMIN') throw new HttpsError('permission-denied', 'Only a Super Admin can modify a Super Admin membership.')
   const active = request.data?.active !== false
   const now = Date.now()
   const permissionNames = ['products', 'catalog', 'orders', 'inventory', 'customers', 'audit', 'settings', 'staff']
   const requestedPermissions = request.data?.permissions
-  const permissions = { ...(current?.permissions || {}) }
+  const roleChanged = Boolean(current?.role && current.role !== role)
+  const permissions = current?.immutableBootstrap ? { ...(current?.permissions || {}) } : roleChanged ? { ...(rolePermissions?.[role] || {}) } : { ...(current?.permissions || {}) }
   if (!current?.immutableBootstrap && requestedPermissions && typeof requestedPermissions === 'object' && !Array.isArray(requestedPermissions)) {
     for (const permission of permissionNames) if (typeof requestedPermissions[permission] === 'boolean') permissions[permission] = requestedPermissions[permission]
   }
@@ -280,6 +289,73 @@ export const setStaffMembership = onCall({ region: 'europe-west1', enforceAppChe
   updates[activityPath()] = { action: 'STAFF_MEMBERSHIP_UPDATED', actorUid: actor.uid, targetUid: uid, role, active, createdAt: now }
   await database.ref().update(updates)
   return { uid, email: authUser.email || '', role, active }
+})
+
+const staffRoles = new Set(['ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'])
+const rolePermissions = {
+  ADMIN: { products: true, catalog: true, orders: true, inventory: true, customers: true, audit: true, settings: true, staff: true },
+  MANAGER: { products: true, catalog: true, orders: true, inventory: true, customers: true, audit: true, settings: false, staff: false },
+  EMPLOYEE: { products: false, catalog: false, orders: true, inventory: true, customers: false, audit: false, settings: false, staff: false },
+  VIEWER: { products: true, catalog: true, orders: true, inventory: true, customers: true, audit: true, settings: false, staff: false },
+}
+
+async function findPendingInvite(emailLower) {
+  const snapshot = await database.ref(`shops/${SHOP_ID}/private/staffInvitations`).orderByChild('emailLower').equalTo(emailLower).get()
+  const matches = snapshot.val() || {}
+  return Object.entries(matches).find(([, invite]) => invite?.status === 'PENDING') || null
+}
+
+export const inviteStaffMember = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const actor = await requireStaff(request, 'staff', 'ADMIN')
+  const email = normalizeEmail(request.data?.email)
+  const role = idText(request.data?.role, 'role')
+  if (!staffRoles.has(role)) throw new HttpsError('invalid-argument', 'Only ADMIN, MANAGER, EMPLOYEE, or VIEWER can be invited.')
+  const existingInvite = await findPendingInvite(email)
+  if (existingInvite) throw new HttpsError('already-exists', 'A pending invitation already exists for this email.')
+  const staffSnapshot = await database.ref(`shops/${SHOP_ID}/private/staff`).get()
+  const existingStaff = Object.values(staffSnapshot.val() || {}).find((member) => member?.emailLower === email || String(member?.email || '').toLowerCase() === email)
+  if (existingStaff) throw new HttpsError('already-exists', 'This email already has a staff membership.')
+  const now = Date.now()
+  const invite = database.ref(`shops/${SHOP_ID}/private/staffInvitations`).push()
+  const record = { email, emailLower: email, role, status: 'PENDING', createdAt: now, createdBy: actor.uid }
+  await database.ref().update({ [`shops/${SHOP_ID}/private/staffInvitations/${invite.key}`]: record, [activityPath()]: { action: 'STAFF_INVITATION_CREATED', actorUid: actor.uid, email, role, invitationId: invite.key, createdAt: now } })
+  return { invitationId: invite.key, email, role }
+})
+
+export const cancelStaffInvitation = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const actor = await requireStaff(request, 'staff', 'ADMIN')
+  const invitationId = keyText(request.data?.invitationId, 'invitationId')
+  const inviteRef = database.ref(`shops/${SHOP_ID}/private/staffInvitations/${invitationId}`)
+  const invite = (await inviteRef.get()).val()
+  if (!invite || invite.status !== 'PENDING') throw new HttpsError('not-found', 'Pending invitation not found.')
+  const now = Date.now()
+  const updates = { [`shops/${SHOP_ID}/private/staffInvitations/${invitationId}/status`]: 'CANCELLED', [`shops/${SHOP_ID}/private/staffInvitations/${invitationId}/cancelledAt`]: now, [activityPath()]: { action: 'STAFF_INVITATION_CANCELLED', actorUid: actor.uid, invitationId, email: invite.email, createdAt: now } }
+  await database.ref().update(updates)
+  return { invitationId, status: 'CANCELLED' }
+})
+
+export const acceptStaffInvitation = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {
+  const uid = authUid(request)
+  const token = request.auth?.token || {}
+  if (!emulatorMode && token.firebase?.sign_in_provider !== 'google.com') throw new HttpsError('permission-denied', 'Google sign-in is required to accept a staff invitation.')
+  if (!emulatorMode && token.email_verified !== true) throw new HttpsError('permission-denied', 'A verified Google email is required.')
+  const email = normalizeEmail(token.email)
+  const currentMembershipRef = database.ref(`shopMemberships/${uid}/${SHOP_ID}`)
+  if ((await currentMembershipRef.get()).exists()) throw new HttpsError('already-exists', 'This Firebase account already has a membership.')
+  const match = await findPendingInvite(email)
+  if (!match) throw new HttpsError('not-found', 'No pending invitation matches this verified Google account.')
+  const [invitationId, invite] = match
+  const now = Date.now()
+  const record = { uid, email, emailLower: email, displayName: typeof token.name === 'string' ? token.name.slice(0, 120) : '', role: invite.role, active: true, permissions: { ...rolePermissions[invite.role] }, createdAt: now, updatedAt: now, invitationId }
+  const updates = {}
+  updates[`shopMemberships/${uid}/${SHOP_ID}`] = record
+  updates[`shops/${SHOP_ID}/private/staff/${uid}`] = record
+  updates[`shops/${SHOP_ID}/private/staffInvitations/${invitationId}/status`] = 'ACCEPTED'
+  updates[`shops/${SHOP_ID}/private/staffInvitations/${invitationId}/acceptedUid`] = uid
+  updates[`shops/${SHOP_ID}/private/staffInvitations/${invitationId}/acceptedAt`] = now
+  updates[activityPath()] = { action: 'STAFF_INVITATION_ACCEPTED', actorUid: uid, targetUid: uid, invitationId, email, role: invite.role, createdAt: now }
+  await database.ref().update(updates)
+  return { uid, email, role: invite.role, active: true }
 })
 
 export const confirmOrderPayment = onCall({ region: 'europe-west1', enforceAppCheck: false }, async (request) => {

@@ -33,11 +33,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install admin dependencies
+        run: npm --prefix admin ci
+
       - name: Build
         run: npm run build
 
+      - name: Build authenticated admin route
+        run: npm --prefix admin run build
+
       - name: Prepare direct admin route
-        run: mkdir -p dist/admin && cp dist/index.html dist/admin/index.html
+        run: mkdir -p dist/admin && cp -R admin/dist/. dist/admin/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
