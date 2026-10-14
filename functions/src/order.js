@@ -85,9 +85,10 @@ function normalizeRecipe(recipe) {
 
 function findDeliveryArea(delivery, province, district) {
   const provinceRecord = delivery?.[province]
+  if (!provinceRecord || provinceRecord.enabled === false) return null
   const areas = provinceRecord?.areas || provinceRecord?.districts || provinceRecord
   const area = areas?.[district]
-  return area && typeof area === 'object' && Number.isInteger(area.price) && area.price >= 0 ? area : null
+  return area && typeof area === 'object' && area.enabled !== false && Number.isInteger(area.price) && area.price >= 0 ? area : null
 }
 
 function timestamp(value) {

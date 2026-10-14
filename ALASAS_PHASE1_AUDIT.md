@@ -200,6 +200,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - Checkout now requires an explicit `PUBLISHED` product state in the server
   pricing path as well as in the public catalog query; a new unit test rejects
   an active product with no publication state.
+- Checkout now also rejects disabled delivery provinces and areas on the server
+  pricing path. Unit coverage and the repeatable Emulator harness both rejected
+  a synthetic `ClosedArea` with `FAILED_PRECONDITION`; enabled delivery still
+  priced and completed normally.
 - The local catalog-rules smoke test passed against the correct
   `floor-232bc-default-rtdb` Database Emulator namespace: an unfiltered public
   read returned `401`, while `orderBy status == PUBLISHED` returned `200` with

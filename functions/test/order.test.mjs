@@ -21,6 +21,8 @@ test('normalizes and prices from Firebase catalog values', () => {
 test('rejects duplicate products and unconfigured delivery', () => {
   assert.throws(() => normalizeOrderInput({ ...input, items: [{ productId: 'red', quantity: 1 }, { productId: 'red', quantity: 1 }] }), /DUPLICATE_PRODUCT/)
   assert.throws(() => calculateOrder(input, { red: { name: 'Red bouquet', price: 35000, active: true, status: 'PUBLISHED' } }, {}, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /DELIVERY_AREA_UNCONFIGURED/)
+  assert.throws(() => calculateOrder(input, { red: { name: 'Red bouquet', price: 35000, active: true, status: 'PUBLISHED' } }, { Najaf: { areas: { University: { price: 5000, enabled: false } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /DELIVERY_AREA_UNCONFIGURED/)
+  assert.throws(() => calculateOrder(input, { red: { name: 'Red bouquet', price: 35000, active: true, status: 'PUBLISHED' } }, { Najaf: { enabled: false, areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /DELIVERY_AREA_UNCONFIGURED/)
 })
 
 test('rejects stale client price because item price is read from catalog', () => {

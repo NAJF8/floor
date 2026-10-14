@@ -100,7 +100,7 @@ try {
   await database.ref(`shopMemberships/${viewer.uid}/${SHOP_ID}`).set({ role: 'VIEWER', active: true, permissions: { catalog: true } })
   await root.set({
     products: { rose: { name: 'Synthetic rose', price: 40000, category: 'roses', status: 'PUBLISHED', active: true, stock: 2, inventoryRecipe: { wrap: 1 } } },
-    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' } }, discounts: {} },
+    public: { delivery: { Najaf: { areas: { University: { price: 5000, enabled: true }, ClosedArea: { price: 7000, enabled: false } } } }, paymentMethods: { cash: { name: 'Cash', type: 'CASH', enabled: true }, zain: { name: 'Synthetic ZainCash', type: 'ZAINCASH', enabled: true, walletName: 'Synthetic wallet', walletNumber: '07700000002' } }, discounts: {} },
     private: { inventory: { wrap: { name: 'Synthetic wrap', quantity: 3, active: true, status: 'ACTIVE' } } },
   })
 
@@ -138,6 +138,7 @@ try {
   await expectFunctionError('adminWrite', viewer.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Unauthorized synthetic category' } }, 'PERMISSION_DENIED')
 
   const input = { items: [{ productId: 'rose', quantity: 1, packaging: 'Premium wrap', addOns: ['Ribbon'], giftMessage: 'Local test' }], customerName: 'Synthetic Customer', phone: '07700000000', recipientName: 'Synthetic Recipient', recipientPhone: '07700000001', province: 'Najaf', district: 'University', address: 'Local emulator only', deliveryAt: '2026-10-20T12:00', paymentMethodId: 'cash', idempotencyKey: 'local-integration-order-1' }
+  await expectFunctionError('createOrder', customer.token, { ...input, district: 'ClosedArea', idempotencyKey: 'local-integration-disabled-delivery' }, 'FAILED_PRECONDITION')
   const created = await callFunction('createOrder', customer.token, input)
   assert.equal(created.paymentStatus, 'UNPAID')
   assert.equal(created.total, 45000)
