@@ -13,12 +13,9 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation commits are covered through `c3a68f6`; subsequent commits
-    update this audit and its master-prompt status matrix,
-    configuration hygiene, delivery/payment UI boundary checks, and audit-only
-    updates. The repeatable Auth/Database/Functions harness remains in the
-    same isolated branch; the latest customer acceptance-helper commit is
-    `f1355de`.
+  implementation commits are covered through `c21072c`; the branch also
+    contains the local customer/admin browser acceptance, the isolated
+    Auth/Database/Functions harness, and the current audit/status matrix.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `a7a70b8`, with a clean
     worktree after the verified local changes.
@@ -214,8 +211,9 @@ Production Firebase data, and it does not push or deploy either repository.
   unverified.
 - The Admin callable also rejects destructive `replace` operations, and the
   Admin client no longer exposes delete/replace helpers; import/export remains
-  merge-only. Functions tests and the Admin build passed, with no authenticated
-  mutation runtime acceptance.
+  merge-only. Functions tests and the Admin build passed; authorized local
+  callable mutation/readback is covered below, while Admin-form mutation
+  acceptance remains unverified.
 - The `adminWrite` callable now validates critical Admin values server-side:
   product prices/stock/status/recipes, inventory quantities, payment method
   types, discount bounds, category fields, and delivery values. The repeatable
@@ -229,12 +227,17 @@ Production Firebase data, and it does not push or deploy either repository.
 - Customer Home/Header/Announcement now consume public `homepage` and
   `settings` values for the hero title/description/banner, featured category,
   store name/logo, announcement, and temporary order closure, with explicit
-  fallbacks when fields are absent. The Customer build passed; authenticated
-  live reflection remains unverified.
+  fallbacks when fields are absent. Local Emulator browser reflection passed;
+  Production reflection remains unverified.
 - Admin document settings now serialize Boolean fields as actual booleans
   rather than strings; `enabled`, `acceptingOrders`, and `temporaryClosed` are
   exposed as explicit controls. This closes the configuration-type mismatch;
   authenticated runtime readback remains unverified.
+- Fixed `adminWrite` update semantics to merge the existing record before
+  applying partial changes. A local price update now preserves the product
+  name, category, and publication state; the regression harness asserts all
+  three fields after a price/image update. This prevents a routine Admin edit
+  from accidentally hiding a product by deleting omitted fields.
 - Both web clients now support an explicit local-only
   `VITE_USE_FIREBASE_EMULATORS=true` switch for Auth/RTDB/Functions testing;
   the default build keeps the existing Firebase project configuration.
@@ -289,6 +292,15 @@ Production Firebase data, and it does not push or deploy either repository.
   المفضلة` after removal, and `/favorites` showed one saved synthetic product.
   This is local browser evidence only: no Production write, deploy, or live
   authenticated checkout was attempted.
+- Local cross-surface reflection acceptance then used an authorized synthetic
+  Admin callable to change `browserRose` from `15,000` to `17,000` IQD. The
+  Customer `/shop` browser read back the new price while retaining the product,
+  category, and published visibility. Setting the same product to `HIDDEN` and
+  `active: false` removed it from the Customer catalog while the other
+  published product remained. Local Admin updates to homepage title,
+  homepage description, and store name were also rendered by the Customer
+  home page. These are Emulator-only callable/readback checks, not Admin UI
+  button acceptance or Production evidence.
 - Checkout now also renders a local review card listing the selected product,
   quantity, and pre-delivery subtotal before submission. CUA read back one
   synthetic product at `15,000` IQD, the subtotal at `15,000` IQD, the enabled
@@ -419,13 +431,13 @@ Production Firebase data, and it does not push or deploy either repository.
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered the isolated worktree against synthetic RTDB data; new worktree was not deployed |
 | Live admin render | PASS (local Emulator browser); Production NOT VERIFIED | Synthetic Auth Emulator login rendered dashboard, products, categories, orders, discounts, payments, and reports; no Production credentials or mutation |
-| Product/category CRUD | PASS (local callable subset); Production NOT VERIFIED | Synthetic Admin create/read/update, two-image and price readback, category archive, and product-preservation readback passed; full browser acceptance and Production write/readback remain unverified |
+| Product/category CRUD | PASS (local callable + Customer reflection); Production NOT VERIFIED | Synthetic Admin create/read/update, two-image and price readback, merge-preservation regression, category archive, and Customer price/visibility reflection passed; Admin UI mutation and Production write/readback remain unverified |
 | Published product exposure | PASS (local Rules Emulator); Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product/config writes are disabled, and Admin reads through role-checked callable; local smoke returned 401 unfiltered and only the published fixture, rules were not deployed |
 | Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the dashboard and read authorized Firebase-backed data; Production session not tested |
 | Reports | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the report page with synthetic order/payment totals; Production session not tested |
-| Homepage/settings reflection | BUILD PASS; runtime NOT VERIFIED | Admin document editors and Customer hero/header/announcement reflection compile; no live authenticated acceptance |
+| Homepage/settings reflection | PASS (local callable + Customer browser); Production NOT VERIFIED | Local Admin-authorized updates to homepage title/description and store name rendered in the Customer home page; Admin form button acceptance and Production readback remain unverified |
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, store-closure and province-payment enforcement, full retry readback, and owner-only access; Production callable is not deployed |
@@ -487,5 +499,5 @@ Production Firebase data, and it does not push or deploy either repository.
 | REPORTS | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered derived reports; Production session not tested |
 | ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
 | IMPORT_EXPORT | BUILD PASS; runtime NOT VERIFIED | Merge-only validation compiled; no live Admin session |
-| LIVE_CUSTOMER_TEST | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered two-product catalog, cart total, delivery/payment choices, authenticated order creation, WhatsApp URL, Account order, and Track Order |
+| LIVE_CUSTOMER_TEST | PASS (local Emulator browser + Admin reflection); Production NOT VERIFIED | CUA rendered the catalog, cart total, delivery/payment choices, authenticated order creation, WhatsApp URL, Account/Track Order, Admin price update reflection, hidden-product exclusion, and homepage/settings reflection |
 | LIVE_ADMIN_TEST | PASS (local Emulator browser + Customer-to-Admin readback); Production NOT VERIFIED | Synthetic Admin login rendered dashboard, products, categories, orders, discounts, payments, and reports; a Customer-created cash order appeared in Admin, callable confirmation/approval read back, and refreshed Orders rendered `CONFIRMED`/`تمت الموافقة`; Google-authenticated Production acceptance was not performed |
