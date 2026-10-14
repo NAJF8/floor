@@ -108,6 +108,9 @@ Production Firebase data, and it does not push or deploy either repository.
   `users/{uid}/favorites` through an authenticated `syncCustomerFavorites`
   callable after sign-in. Synthetic Emulator readback merged two local IDs
   with a third account ID and rejected an invalid path-like ID.
+- The product-detail favorite control now uses the same local storage and
+  authenticated merge path as product cards; it is no longer a visual-only
+  button. Customer build passed; authenticated browser sync remains unverified.
 - Customer order tracking now calls a dedicated `getCustomerOrder` callable;
   it returns a sanitized order summary only when the authenticated UID owns
   the requested order. Synthetic emulator readback returned the owner's
