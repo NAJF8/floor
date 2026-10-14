@@ -511,10 +511,11 @@ export const syncCustomerFavorites = onCall({ region: 'europe-west1', enforceApp
   if (!Array.isArray(supplied) || supplied.length > 200 || supplied.some((id) => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(id))) {
     throw new HttpsError('invalid-argument', 'Favorite IDs are invalid.')
   }
+  if (request.data?.replace !== undefined && typeof request.data.replace !== 'boolean') throw new HttpsError('invalid-argument', 'Invalid favorite sync mode.')
   const favoritesRef = database.ref(`users/${uid}/favorites`)
   const current = (await favoritesRef.get()).val()
   const existing = current && typeof current === 'object' && !Array.isArray(current) ? Object.entries(current).filter(([, value]) => value === true).map(([id]) => id) : []
-  const favoriteIds = [...new Set([...existing, ...supplied])].slice(0, 200)
+  const favoriteIds = (request.data?.replace === true ? [...new Set(supplied)] : [...new Set([...existing, ...supplied])]).slice(0, 200)
   await favoritesRef.set(Object.fromEntries(favoriteIds.map((id) => [id, true])))
   return { favoriteIds }
 })

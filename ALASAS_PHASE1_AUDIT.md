@@ -111,6 +111,10 @@ Production Firebase data, and it does not push or deploy either repository.
 - The product-detail favorite control now uses the same local storage and
   authenticated merge path as product cards; it is no longer a visual-only
   button. Customer build passed; authenticated browser sync remains unverified.
+- Favorite synchronization now distinguishes initial account merge from later
+  replacement, so removing a favorite removes it from the authenticated RTDB
+  record. Emulator readback proved merge of two synthetic IDs followed by an
+  exact single-ID replacement.
 - Customer order tracking now calls a dedicated `getCustomerOrder` callable;
   it returns a sanitized order summary only when the authenticated UID owns
   the requested order. Synthetic emulator readback returned the owner's
