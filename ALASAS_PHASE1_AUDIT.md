@@ -14,7 +14,8 @@ Production Firebase data, and it does not push or deploy either repository.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
     implementation source changes end at `a91ccfc`; subsequent commits on this
-    branch contain audit-only updates.
+    branch add local acceptance tooling and audit-only updates. The repeatable
+    Auth/Database/Functions harness is `17e6fe5`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `43a2ee1`, with a clean
     worktree after the verified local changes.
@@ -247,6 +248,16 @@ Production Firebase data, and it does not push or deploy either repository.
   the same order ID; a second order with the exhausted code returned
   `DISCOUNT_UNAVAILABLE`; usage count was `1` and only the first order was
   recorded.
+- Repeatable local Auth/Database/Functions acceptance passed with synthetic
+  customer, manager, and second-customer identities. Server pricing returned
+  `45,000` IQD, the idempotency retry reused the order, the owner read
+  succeeded while the second customer received `NOT_FOUND`, payment moved to
+  `CONFIRMED`, approval moved the order to `APPROVED`, repeated approval
+  returned `reused: true`, and `NEW -> DELIVERED` was rejected with
+  `FAILED_PRECONDITION`. Readback confirmed product stock `2 -> 1`, wrap
+  material `3 -> 2`, and reservation status `RESERVED`. The run required a
+  longer local Functions discovery timeout because this machine uses Node 25
+  while the project requests Node 20; no Production write or deploy occurred.
 
 ## Blocking gaps before a Production release
 
@@ -285,7 +296,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Homepage/settings reflection | BUILD PASS; runtime NOT VERIFIED | Admin document editors and Customer hero/header/announcement reflection compile; no live authenticated acceptance |
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
-| Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
+| Create-order backend | PASS (emulator only) | Repeatable authenticated synthetic order harness proved server pricing, readback, retry idempotency, and owner-only access; Production callable is not deployed |
 | Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Product IDs/config, route-forwarded and persisted cart options, callable sanitization, and post-order WhatsApp/cart snapshot are wired; no deployed callable or authenticated browser acceptance |
 | Coupon pricing and usage | PASS (unit + emulator) | 8 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
@@ -296,8 +307,8 @@ Production Firebase data, and it does not push or deploy either repository.
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
 | WhatsApp order/approval messages | BUILD PASS; runtime NOT VERIFIED | Customer order and Admin approval links include tracking URLs; opening WhatsApp is not proof of sending |
 | Admin order status controls | BUILD PASS; runtime NOT VERIFIED | Payment confirmation is dedicated; approved orders can continue to preparation, while generic entry to dedicated states is blocked; no live Admin acceptance |
-| Order status state machine | UNIT PASS; callable runtime NOT VERIFIED | Explicit transition map rejects unsafe jumps and keeps approval/payment actions dedicated |
-| Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven |
+| Order status state machine | PASS (local emulator + unit) | Callable runtime rejected `NEW -> DELIVERED`; dedicated payment confirmation and approval transitions were read back; live Admin acceptance remains unverified |
+| Payment approval/inventory | PASS (emulator only) | Confirmed payment, approval, stock/material decrement, reservation readback, retry no double decrement; archived-material rejection added but not runtime-proven; Production remains unverified |
 | Admin mutation authorization | PASS (emulator only) | Manager write accepted, sensitive CVV rejected, Viewer write rejected |
 | Admin write audit logging | PASS (emulator only) | Manager product create and matching `ADMIN_WRITE` readback |
 | Admin private reads/Rules hardening | PASS (emulator only) | `adminRead` role gate and private parent read closure; no Production Rules deploy |
