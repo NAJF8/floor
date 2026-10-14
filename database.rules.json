@@ -38,9 +38,9 @@
           ".write": false,
           "demoProducts": {
             ".read": true,
-            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN'",
+            ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('products').val() != false || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)",
             "$productId": {
-              ".validate": "newData.hasChildren(['name', 'category', 'price', 'demoTag']) && newData.child('name').isString() && newData.child('category').isString() && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('demoTag').val() == 'ALASAS_DEMO_V1' && (!newData.hasChild('status') || newData.child('status').val() == 'DEMO') && (!newData.hasChild('active') || newData.child('active').val() == false) && (!newData.hasChild('orderable') || newData.child('orderable').val() == false)"
+              ".validate": "newData.hasChildren(['name', 'category', 'price', 'demoTag']) && newData.child('name').isString() && newData.child('category').isString() && newData.child('price').isNumber() && newData.child('demoTag').val() == 'ALASAS_DEMO_V1' && (!newData.hasChild('status') || newData.child('status').val() == 'DEMO') && (!newData.hasChild('active') || newData.child('active').val() == false) && (!newData.hasChild('orderable') || newData.child('orderable').val() == false) && !newData.hasChild('costPrice') && !newData.hasChild('stock') && !newData.hasChild('supplier') && !newData.hasChild('inventoryRecipe') && !newData.hasChild('private')"
             }
           },
           "categories": {

@@ -81,6 +81,10 @@ test('rejects the current DEMO records while they remain draft and inactive', ()
   assert.throws(() => calculateOrder(input, { red: { name: 'Demo bouquet', price: 40000, active: false, status: 'DRAFT', demoTag: 'ALASAS_DEMO_V1', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
 })
 
+test('rejects a DEMO record even if a client falsely marks it published', () => {
+  assert.throws(() => calculateOrder(input, { red: { name: 'Demo bouquet', price: 40000, active: true, status: 'PUBLISHED', demoTag: 'ALASAS_DEMO_V1', orderable: true } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }), /PRODUCT_UNAVAILABLE/)
+})
+
 test('enforces the order status state machine', () => {
   assert.equal(canTransitionOrderStatus('NEW', 'PAYMENT_REVIEW'), true)
   assert.equal(canTransitionOrderStatus('PAYMENT_CONFIRMED', 'APPROVED'), true)

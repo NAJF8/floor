@@ -75,7 +75,7 @@ export function normalizeOrderInput(input) {
 }
 
 function productIsPublished(product) {
-  return product && typeof product === 'object' && !Array.isArray(product) && product.active !== false && String(product.status || '').toUpperCase() === 'PUBLISHED'
+  return product && typeof product === 'object' && !Array.isArray(product) && product.active !== false && String(product.status || '').toUpperCase() === 'PUBLISHED' && product.demoTag !== 'ALASAS_DEMO_V1' && product.displayMode !== 'DEMO' && product.orderable !== false
 }
 
 function normalizeRecipe(recipe) {
