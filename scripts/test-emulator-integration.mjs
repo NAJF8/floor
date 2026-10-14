@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { deleteApp, initializeApp } from 'firebase-admin/app'
 import { getDatabase } from 'firebase-admin/database'
+import { deleteApp as deleteClientApp, initializeApp as initializeClientApp } from 'firebase/app'
+import { connectAuthEmulator, getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { connectDatabaseEmulator, getDatabase as getClientDatabase, ref as clientRef, set as clientSet } from 'firebase/database'
 
 const SHOP_ID = 'floor-232bc'
 const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST || ''
@@ -22,12 +25,13 @@ async function responseJson(response) {
 
 async function signUp(label) {
   const email = `${label}-${Date.now()}@example.test`
+  const password = 'LocalOnly-123456'
   const response = await fetch(`http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'LocalOnly-123456', returnSecureToken: true }),
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password, returnSecureToken: true }),
   })
   const { body, text } = await responseJson(response)
   if (!response.ok || !body?.idToken || !body?.localId) throw new Error(`Auth emulator signup failed (${response.status}): ${text}`)
-  return { uid: body.localId, token: body.idToken, email }
+  return { uid: body.localId, token: body.idToken, email, password }
 }
 
 async function callFunction(name, token, data) {
@@ -45,6 +49,24 @@ async function expectFunctionError(name, token, data, expectedStatus) {
   })
   const { body, text } = await responseJson(response)
   assert.equal(body?.error?.status, expectedStatus, `${name} returned an unexpected error: ${text}`)
+}
+
+async function clientWrite(user, path, value) {
+  const clientApp = initializeClientApp({ apiKey: 'local-emulator-key', authDomain: 'localhost', databaseURL: `http://${host}?ns=${namespace}`, projectId: SHOP_ID }, `rules-client-${Date.now()}-${Math.random()}`)
+  const clientAuth = getAuth(clientApp)
+  const clientDatabase = getClientDatabase(clientApp)
+  connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectDatabaseEmulator(clientDatabase, '127.0.0.1', 9000)
+  try {
+    await signInWithEmailAndPassword(clientAuth, user.email, user.password)
+    await clientSet(clientRef(clientDatabase, path), value)
+    return 'WRITE_SUCCEEDED'
+  } catch (error) {
+    return error?.code || String(error)
+  } finally {
+    await signOut(clientAuth).catch(() => undefined)
+    await deleteClientApp(clientApp)
+  }
 }
 
 const root = database.ref(`shops/${SHOP_ID}`)
@@ -68,6 +90,10 @@ try {
   assert.equal(staffMembership.val().role, 'EMPLOYEE')
   assert.equal(staffMembership.val().permissions.products, false)
   assert.equal(staffRecord.val().email, staff.email)
+  const authenticatedPrivateWriteStatus = await clientWrite(customer, `shops/${SHOP_ID}/private/orders/direct-probe`, { probe: true })
+  const authenticatedUserWriteStatus = await clientWrite(customer, `users/${customer.uid}/favorites/direct-probe`, true)
+  assert.equal(authenticatedPrivateWriteStatus, 'PERMISSION_DENIED')
+  assert.equal(authenticatedUserWriteStatus, 'PERMISSION_DENIED')
 
   const category = await callFunction('adminWrite', admin.token, { operation: 'create', path: `shops/${SHOP_ID}/public/categories`, value: { name: 'Synthetic category', visible: true, active: true } })
   assert.match(category.key, /^[A-Za-z0-9_-]+$/)
@@ -111,7 +137,7 @@ try {
   assert.equal(transferOrder.paymentStatus, 'PENDING_REVIEW')
   const transferSnapshot = await root.child(`private/orders/${transferOrder.orderId}`).get()
   assert.equal(transferSnapshot.val().transferReference, 'SYNTHETIC-REF-1')
-  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference }, null, 2))
+  console.log(JSON.stringify({ orderId: created.orderId, total: created.total, retryReused: retry.reused, ownerOnlyRead: true, authenticatedPrivateWriteStatus, authenticatedUserWriteStatus, paymentStatus: orderSnapshot.val().paymentStatus, orderStatus: orderSnapshot.val().orderStatus, stock: productSnapshot.val().stock, materialQuantity: inventorySnapshot.val().quantity, reservation: reservationSnapshot.val().status, transferOrderStatus: transferOrder.paymentStatus, transferReferenceReadback: transferSnapshot.val().transferReference }, null, 2))
 } finally {
   await root.remove()
   await database.ref('shopMemberships').remove()
