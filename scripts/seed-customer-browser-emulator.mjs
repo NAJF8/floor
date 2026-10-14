@@ -22,7 +22,7 @@ try {
   await auth.updateUser(user.uid, { emailVerified: true, password, displayName: 'Synthetic Customer Browser' })
   await database.ref(`shops/${SHOP_ID}`).set({
     products: {
-      browserRose: { name: 'Synthetic browser rose', nameEn: 'Synthetic Browser Rose', price: 15000, category: 'roses', status: 'PUBLISHED', active: true, imageUrls: ['https://images.unsplash.com/photo-1548094971-2e4a2a1f13a4?auto=format&fit=crop&w=900&h=1100&q=88', 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=900&h=1100&q=88'], addOns: ['Ribbon'], stock: 4 },
+      browserRose: { name: 'Synthetic browser rose', nameEn: 'Synthetic Browser Rose', price: 15000, category: 'roses', status: 'PUBLISHED', active: true, imageUrls: ['https://images.unsplash.com/photo-1548094971-2e4a2a1f13a4?auto=format&fit=crop&w=900&h=1100&q=88', 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=900&h=1100&q=88'], addOns: ['Ribbon'], inventoryRecipe: { ribbon: 1 }, stock: 4 },
       browserGift: { name: 'Synthetic browser gift box', nameEn: 'Synthetic Browser Gift Box', price: 12000, category: 'roses', status: 'PUBLISHED', active: true, imageUrls: ['https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=900&h=1100&q=88'], stock: 5 },
       browserDraft: { name: 'Synthetic draft hidden', price: 1, category: 'roses', status: 'DRAFT', active: false },
     },
@@ -34,6 +34,7 @@ try {
       homepage: { heroTitle: 'بيانات Emulator فقط', heroDescription: 'لا توجد كتابة Production في هذا الاختبار.' },
       aiAssistant: { enabled: false },
     },
+    private: { inventory: { ribbon: { name: 'Synthetic ribbon', quantity: 3, unit: 'piece', reorderLevel: 1, active: true, status: 'ACTIVE' } } },
   })
   console.log(JSON.stringify({ seeded: true, project: SHOP_ID, namespace, uid: user.uid, email, password, publishedProducts: ['browserRose', 'browserGift'], disabledArea: 'ClosedArea' }, null, 2))
 } finally {
