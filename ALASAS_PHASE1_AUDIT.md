@@ -13,10 +13,10 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `63fabd3`; the latest audit commit is
+    implementation source ends at `e28c5c9`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `2c3ff48`, with a clean
+  - The isolated implementation branch now ends at `60a8a5f`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -166,6 +166,10 @@ Production Firebase data, and it does not push or deploy either repository.
   category delete path. Direct browser writes to the public shop configuration
   are also disabled locally, leaving the audited Admin callable as the write
   path. No Rules deployment was attempted.
+- The Admin callable now rejects destructive `delete` operations, and the
+  remaining generic collection editor archives records instead. Functions
+  tests and the Admin build passed; authenticated mutation runtime remains
+  unverified.
 - Customer now reads `public/aiAssistant` settings for enablement, assistant
   name, welcome text, chips, and handoff text. It remains a configured
   conversational preview; no external AI/image-generation backend is called.
@@ -275,6 +279,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Coupon pricing and usage | PASS (unit + emulator) | 8 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
+| Destructive admin deletes | PASS (local code/test boundary) | Callable rejects `delete`; category and collection UI use archive/disable updates; no live mutation acceptance |
 | Favorites | PASS (emulator only) | Local visitor storage plus authenticated callable merge/readback; Google popup/live Production flow remains unverified |
 | Customer order tracking | PASS (emulator only) | Owner readback returned a sanitized order summary; a different synthetic UID received `NOT_FOUND`; Google popup/live Production flow remains unverified |
 | Customer account order list | PASS (emulator only) | Two synthetic UIDs each received only their own sanitized order summary; no live Google browser acceptance |
