@@ -4,6 +4,8 @@ import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, 
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowUpLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Clock3, Compass, Heart, Instagram, LayoutDashboard, Menu, Minus, Package, Palette, Phone, Plus, Search, Send, ShoppingBag, Sparkles, Star, Store, Truck, X, Zap } from 'lucide-react'
 import './styles.css'
+import { AdminApp } from './adminApp'
+import { AdminGate } from './adminAuth'
 
 const image = (id: string, width = 900, height = 1100) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&h=${height}&q=88`
 const logo = `${import.meta.env.BASE_URL}alasas-logo.jpg`
@@ -31,8 +33,10 @@ function useCart() {
 }
 
 function App() {
+  const location = useLocation()
   const cart = useCart(); const [menu, setMenu] = useState(false); const [toast, setToast] = useState('')
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
+  if (location.pathname.startsWith('/admin')) return <Routes><Route path="/admin/*" element={<AdminGate><AdminApp /></AdminGate>} /></Routes>
   return <div className="app-shell">
     <Announcement />
     <Header menu={menu} setMenu={setMenu} cartCount={cart.count} />
@@ -48,7 +52,6 @@ function App() {
       <Route path="/track-order" element={<TrackOrder />} />
       <Route path="/favorites" element={<Favorites />} />
       <Route path="/account" element={<Account />} />
-      <Route path="/admin/*" element={<Admin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
     <ChatFab />
