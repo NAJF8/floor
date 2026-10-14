@@ -148,7 +148,16 @@ try {
   assert.equal(ownerOrder.orderId, created.orderId)
   await expectFunctionError('getCustomerOrder', otherCustomer.token, { orderId: created.orderId }, 'NOT_FOUND')
   await callFunction('confirmOrderPayment', admin.token, { orderId: created.orderId })
-  const approved = await callFunction('approveOrder', admin.token, { orderId: created.orderId })
+  const approvalAttempts = await Promise.allSettled([
+    callFunction('approveOrder', admin.token, { orderId: created.orderId }),
+    callFunction('approveOrder', admin.token, { orderId: created.orderId }),
+  ])
+  const approvalValues = approvalAttempts.filter((attempt) => attempt.status === 'fulfilled').map((attempt) => attempt.value)
+  assert.equal(approvalValues.filter((value) => value.reused !== true).length, 1)
+  for (const attempt of approvalAttempts.filter((item) => item.status === 'rejected')) {
+    assert.match(String(attempt.reason?.message || attempt.reason), /ABORTED|busy|Inventory is busy/i)
+  }
+  const approved = approvalValues.find((value) => value.reused !== true)
   assert.equal(approved.orderStatus, 'APPROVED')
   const repeatApproval = await callFunction('approveOrder', admin.token, { orderId: created.orderId })
   assert.equal(repeatApproval.reused, true)
