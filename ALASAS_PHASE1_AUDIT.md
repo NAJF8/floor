@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `6a3a5a2`; the latest audit commit is
+    implementation source ends at `63fabd3`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `2c3ff48`, with a clean
@@ -123,6 +123,10 @@ Production Firebase data, and it does not push or deploy either repository.
   retains products, packaging, add-ons, gift message, and tracking URL. It also
   exposes a direct tracking link; the build passed, while live browser runtime
   remains unverified.
+- The Customer product-page route now forwards selected packaging, color,
+  add-ons, and gift-message options into the persisted cart instead of dropping
+  them at the route callback. The Customer build passed; authenticated browser
+  runtime remains unverified.
 - Admin Dashboard now derives period-scoped confirmed sales, payment/order
   statuses, discounts, recent orders, low-stock alerts, payment summaries, and
   top products from its authorized Firebase reads. It supports today,
@@ -267,7 +271,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
 | Create-order backend | PASS (emulator only) | Authenticated synthetic order, server pricing, readback, retry idempotency |
-| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Product IDs/config, persisted cart options, callable sanitization, and post-order WhatsApp/cart snapshot are wired; no deployed callable or authenticated browser acceptance |
+| Customer cart/checkout wiring | BUILD PASS; runtime NOT VERIFIED | Product IDs/config, route-forwarded and persisted cart options, callable sanitization, and post-order WhatsApp/cart snapshot are wired; no deployed callable or authenticated browser acceptance |
 | Coupon pricing and usage | PASS (unit + emulator) | 8 server pricing tests; emulator pricing, idempotency retry, usage counter, order discount readback, exhausted-code rejection |
 | Payment methods | BUILD PASS; runtime NOT VERIFIED | Structured local editor, disable/archive behavior, and province-aware customer display; no Production mutation or live browser acceptance |
 | Import/export safety | BUILD PASS; runtime NOT VERIFIED | Merge-only client flow compiles; no authenticated Admin browser acceptance |
