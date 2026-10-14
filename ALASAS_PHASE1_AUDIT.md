@@ -13,10 +13,10 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `c00da45`; the latest audit commit is
+    implementation source ends at `3309c07`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `bd48526`, with a clean
+  - The isolated implementation branch now ends at `3918836`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -41,8 +41,13 @@ Production Firebase data, and it does not push or deploy either repository.
 
 ## Current implementation boundary
 
-- The clean customer worktree now subscribes to
-  `shops/floor-232bc/products` and renders valid live records when present.
+- The clean customer worktree now queries
+  `shops/floor-232bc/products` with `status == PUBLISHED` and renders only
+  valid published records when present. The local RTDB rule file now rejects
+  unfiltered public product reads and all direct client writes to that path.
+  Admin reads the full product path through the role-checked `adminRead`
+  callable, so draft and archived records remain available to authorized staff
+  without being exposed to the storefront. Rules were not deployed.
 - It accepts `imageUrls`, uses the first image for cards, and now renders a
   selectable multi-image gallery on the product detail page. If the live
   catalog is empty, the existing visual demo remains visible and the footer
@@ -167,6 +172,9 @@ Production Firebase data, and it does not push or deploy either repository.
 - Both web clients now support an explicit local-only
   `VITE_USE_FIREBASE_EMULATORS=true` switch for Auth/RTDB/Functions testing;
   the default build keeps the existing Firebase project configuration.
+- Checkout now requires an explicit `PUBLISHED` product state in the server
+  pricing path as well as in the public catalog query; a new unit test rejects
+  an active product with no publication state.
 - A CUA-rendered local Customer page showed the Arabic RTL layout, navigation,
   hero, category cards, product cards, and no blank screen. The isolated
   browser could not reach RTDB Emulator port `9000`, so it displayed the
@@ -235,7 +243,8 @@ Production Firebase data, and it does not push or deploy either repository.
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
-| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe archive, safe draft duplication, search/filter/sort, and status filtering are local-only; no Production write performed |
+| Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe archive, safe draft duplication, search/filter/sort, status filtering, and callable-backed full product reads are local-only; no Production write performed |
+| Published product exposure | RULES CHANGE LOCALLY; Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product writes are disabled, and Admin reads through role-checked callable; rules were not deployed |
 | Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
