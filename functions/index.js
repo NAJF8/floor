@@ -86,6 +86,7 @@ export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: fals
   const actor = await requireStaff(request, policy.permission, policy.minimumRole)
   const target = database.ref(path)
   rejectSensitiveFields(request.data?.value)
+  if (operation === 'delete') throw new HttpsError('failed-precondition', 'Destructive deletes are disabled; archive the record instead.')
   const now = Date.now()
   const audit = (key, extra = {}) => ({ action: 'ADMIN_WRITE', operation, path, recordKey: key || '', actorUid: actor.uid, createdAt: now, ...extra })
   if (operation === 'create') {
@@ -99,11 +100,6 @@ export const adminWrite = onCall({ region: 'europe-west1', enforceAppCheck: fals
   if (operation === 'update') {
     if (!request.data?.value || typeof request.data.value !== 'object' || Array.isArray(request.data.value)) throw new HttpsError('invalid-argument', 'Update data must be an object.')
     const updates = { [path]: { ...request.data.value, updatedAt: now }, [activityPath()]: audit(target.key) }
-    await database.ref().update(updates)
-    return { actorUid: actor.uid }
-  }
-  if (operation === 'delete') {
-    const updates = { [path]: null, [activityPath()]: audit(target.key) }
     await database.ref().update(updates)
     return { actorUid: actor.uid }
   }
