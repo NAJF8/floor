@@ -21,5 +21,8 @@
     "dev:admin": "npm run dev --workspace apps/admin",
     "provision:super-admins": "npm run provision:super-admins --workspace apps/admin",
     "seed:default-catalog": "node scripts/seed-default-catalog.mjs"
+  },
+  "devDependencies": {
+    "firebase": "^12.0.0"
   }
 }
