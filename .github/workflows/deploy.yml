@@ -40,7 +40,7 @@ jobs:
         run: npm run build
 
       - name: Build authenticated admin route
-        run: npm --prefix admin run build
+        run: VITE_ADMIN_BASE=/floor/admin/ npm --prefix admin run build
 
       - name: Prepare direct admin route
         run: mkdir -p dist/admin && cp -R admin/dist/. dist/admin/
