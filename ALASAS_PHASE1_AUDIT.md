@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `3309c07`; the latest audit commit is
+    implementation source ends at `ded5c1d`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `3918836`, with a clean
@@ -175,6 +175,11 @@ Production Firebase data, and it does not push or deploy either repository.
 - Checkout now requires an explicit `PUBLISHED` product state in the server
   pricing path as well as in the public catalog query; a new unit test rejects
   an active product with no publication state.
+- The local catalog-rules smoke test passed against the correct
+  `floor-232bc-default-rtdb` Database Emulator namespace: an unfiltered public
+  read returned `401`, while `orderBy status == PUBLISHED` returned `200` with
+  only the synthetic published record. The harness refuses non-local hosts;
+  this remains local evidence, not Production Rules parity.
 - A CUA-rendered local Customer page showed the Arabic RTL layout, navigation,
   hero, category cards, product cards, and no blank screen. The isolated
   browser could not reach RTDB Emulator port `9000`, so it displayed the
@@ -244,7 +249,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | Live customer render | NOT VERIFIED for new code | Existing deployed page inspected; new worktree not deployed |
 | Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
 | Product/category CRUD | BUILD PASS; runtime NOT VERIFIED | Structured product editor, inventory recipe field, safe archive, safe draft duplication, search/filter/sort, status filtering, and callable-backed full product reads are local-only; no Production write performed |
-| Published product exposure | RULES CHANGE LOCALLY; Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product writes are disabled, and Admin reads through role-checked callable; rules were not deployed |
+| Published product exposure | PASS (local Rules Emulator); Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product writes are disabled, and Admin reads through role-checked callable; local smoke returned 401 unfiltered and only the published fixture, rules were not deployed |
 | Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
 | Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
