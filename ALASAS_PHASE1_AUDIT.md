@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `45832ff`; the latest audit commit is
+    implementation source ends at `a91ccfc`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `89d8fcb`, with a clean
@@ -170,6 +170,10 @@ Production Firebase data, and it does not push or deploy either repository.
   remaining generic collection editor archives records instead. Functions
   tests and the Admin build passed; authenticated mutation runtime remains
   unverified.
+- The Admin callable also rejects destructive `replace` operations, and the
+  Admin client no longer exposes delete/replace helpers; import/export remains
+  merge-only. Functions tests and the Admin build passed, with no authenticated
+  mutation runtime acceptance.
 - Customer now reads `public/aiAssistant` settings for enablement, assistant
   name, welcome text, chips, and handoff text. It remains a configured
   conversational preview; no external AI/image-generation backend is called.
