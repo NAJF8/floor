@@ -13,7 +13,7 @@ Production Firebase data, and it does not push or deploy either repository.
   - `main` at `0297d75`, behind `origin/main` by 11 commits.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
-    implementation source ends at `292fc89`; the latest audit commit is
+    implementation source ends at `45832ff`; the latest audit commit is
     `5870a87`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `89d8fcb`, with a clean
@@ -230,6 +230,10 @@ Production Firebase data, and it does not push or deploy either repository.
   rejects unsafe jumps such as `NEW -> DELIVERED`; payment confirmation moves
   eligible orders to `PAYMENT_CONFIRMED` before approval. The transition unit
   tests passed; callable runtime and live Admin acceptance remain unverified.
+- The transition map no longer permits cancellation or rejection after
+  `APPROVED`, because that state has already reserved inventory and no tested
+  release-reservation workflow exists. The boundary is unit-tested; a future
+  cancellation-after-reservation flow needs a separate compensating design.
 - Latest synthetic approval readback: order total `40,000`, payment
   `CONFIRMED`, order `APPROVED`, reservation `RESERVED`, product stock `2 -> 1`,
   rose material `5 -> 3`, wrap material `2 -> 1`, and repeated approval returned
