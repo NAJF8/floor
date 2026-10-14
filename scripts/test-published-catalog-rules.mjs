@@ -12,6 +12,7 @@ const app = initializeApp({ projectId: SHOP_ID, databaseURL: `http://${host}?ns=
 const database = getDatabase(app)
 const path = `shops/${SHOP_ID}/products`
 const endpoint = `http://${host}/${path}.json?ns=${encodeURIComponent(namespace)}`
+const publicSettingsEndpoint = `http://${host}/shops/${SHOP_ID}/public/settings.json?ns=${encodeURIComponent(namespace)}`
 
 try {
   await database.ref(path).set({
@@ -21,15 +22,17 @@ try {
 
   const unfiltered = await fetch(endpoint)
   const filtered = await fetch(`${endpoint}&orderBy=${encodeURIComponent('"status"')}&equalTo=${encodeURIComponent('"PUBLISHED"')}`)
+  const directPublicWrite = await fetch(publicSettingsEndpoint, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ probe: true }) })
   const filteredText = await filtered.text()
   let filteredBody = null
   try { filteredBody = JSON.parse(filteredText) } catch { /* include raw response in the failure below */ }
 
   if (unfiltered.status !== 401) throw new Error(`Expected unfiltered public read 401, received ${unfiltered.status}.`)
   if (filtered.status !== 200) throw new Error(`Expected published query 200, received ${filtered.status}: ${filteredText}`)
+  if (directPublicWrite.status !== 401) throw new Error(`Expected unauthenticated public write 401, received ${directPublicWrite.status}.`)
   if (!filteredBody?.published || filteredBody?.draft) throw new Error('Published query returned an unexpected catalog shape.')
 
-  console.log(JSON.stringify({ unfilteredStatus: unfiltered.status, publishedQueryStatus: filtered.status, returnedKeys: Object.keys(filteredBody) }, null, 2))
+  console.log(JSON.stringify({ unfilteredStatus: unfiltered.status, publishedQueryStatus: filtered.status, directPublicWriteStatus: directPublicWrite.status, returnedKeys: Object.keys(filteredBody) }, null, 2))
 } finally {
   await database.ref(path).remove()
   await deleteApp(app)
