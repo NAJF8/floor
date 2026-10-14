@@ -10,6 +10,7 @@
     "provision:super-admins": "node scripts/provision-super-admins.mjs"
   },
   "dependencies": {
+    "@alasas/shared": "1.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "firebase": "^13.0.0",
     "lucide-react": "^0.468.0",

@@ -8,12 +8,10 @@ import { httpsCallable } from 'firebase/functions'
 import './styles.css'
 import { subscribeToShopCategories, subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerCategoryRecord, type FlowerProductRecord, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
 import { firebaseAuth, firebaseFunctions, googleProvider } from './firebase'
-import { AdminApp } from './adminApp'
-import { AdminGate } from './adminAuth'
 
 const localEmulatorLogin = import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
 const localCustomerEmail = import.meta.env.VITE_LOCAL_CUSTOMER_EMAIL || 'customer-browser@example.test'
-const localCustomerPassword = import.meta.env.VITE_LOCAL_CUSTOMER_PASSWORD || 'LocalOnly-123456'
+const localCustomerPassword = import.meta.env.VITE_LOCAL_CUSTOMER_PASSWORD || ''
 
 const image = (id: string, width = 900, height = 1100) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&h=${height}&q=88`
 const logo = `${import.meta.env.BASE_URL}alasas-logo.jpg`
@@ -108,7 +106,6 @@ function useCart(): CartState {
 function App() {
   const cart = useCart(); const location = useLocation(); const [menu, setMenu] = useState(false); const [toast, setToast] = useState('')
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2600) }
-  if (location.pathname.startsWith('/admin')) return <Routes><Route path="/admin/*" element={<AdminGate><AdminApp /></AdminGate>} /></Routes>
   return <CatalogProvider><div className="app-shell">
     <FavoriteAccountSync />
     <Announcement />

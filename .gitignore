@@ -6,3 +6,5 @@ dist/
 *.log
 .vite/
 .DS_Store
+*.tsbuildinfo
+apps/*/package-lock.json
