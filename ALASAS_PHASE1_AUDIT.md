@@ -14,8 +14,8 @@ Production Firebase data, and it does not push or deploy either repository.
   - Local modifications and untracked Firebase/admin files were preserved.
   - The clean implementation worktree under `.codex/worktrees/alasas-commerce-phase1/floor`
     implementation source changes end at `a91ccfc`; subsequent commits on this
-    branch add local acceptance tooling and audit-only updates. The repeatable
-    Auth/Database/Functions harness is `0a75ef2`.
+    branch add local acceptance tooling, configuration hygiene, and audit-only
+    updates. The repeatable Auth/Database/Functions harness is `0a75ef2`.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
   - The isolated implementation branch now ends at `43a2ee1`, with a clean
     worktree after the verified local changes.
@@ -272,6 +272,12 @@ Production Firebase data, and it does not push or deploy either repository.
   `PERMISSION_DENIED`. A synthetic ZainCash order remained `PENDING_REVIEW`
   and its transfer reference read back unchanged. This is Emulator evidence;
   Admin browser behavior and Production Rules/deployment remain unverified.
+- Removed an unsupported `/auth` block from the isolated `firebase.json` after
+  Firebase CLI warned that `authorizedDomains` and `providers` were unknown
+  configuration properties. The CLI warning disappeared; Google Sign-In code
+  remains in `src/firebase.ts` and `signInWithPopup` remains in the Customer
+  and Admin clients. This changes local configuration hygiene only and does
+  not alter Firebase Console providers or authorized domains.
 
 ## Blocking gaps before a Production release
 
