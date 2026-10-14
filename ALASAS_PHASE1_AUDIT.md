@@ -19,7 +19,7 @@ Production Firebase data, and it does not push or deploy either repository.
     updates. The repeatable Auth/Database/Functions harness remains in the
     same isolated branch.
 - Admin repository: `C:\Users\MSI\Desktop\floor-admin`
-  - The isolated implementation branch now ends at `7f7acb8`, with a clean
+  - The isolated implementation branch now ends at `a7a70b8`, with a clean
     worktree after the verified local changes.
 - The customer build in the existing checkout and the clean implementation
   worktree both completed successfully.
@@ -149,6 +149,14 @@ Production Firebase data, and it does not push or deploy either repository.
 - Admin Reports now derives confirmed sales, confirmed non-cash transfers,
   uncollected cash, discounts, status counts, top products, provinces, low
   stock, employee activity, and a local CSV export from authorized reads.
+- Admin browser acceptance is now proven locally without Google or Production
+  credentials: a seed script refuses non-local Auth/Database hosts, creates a
+  synthetic verified Admin in Auth Emulator, and the Dev-only login form is
+  enabled only when `import.meta.env.DEV` and
+  `VITE_USE_FIREBASE_EMULATORS=true`. CUA then rendered the authenticated
+  dashboard and read back the synthetic product, category, order, automatic
+  discount, cash payment, and reports data through `adminRead`. Production
+  Google-authenticated acceptance remains unverified.
 - Admin product editing now exposes an `inventoryRecipe` JSON field with local
   validation for material IDs and positive integer quantities; it is wired to
   the same field consumed by approval-time inventory decrement logic. The
@@ -356,8 +364,9 @@ Production Firebase data, and it does not push or deploy either repository.
    `403 SERVICE_DISABLED`: the Cloud Functions API has not been used or enabled
    for this project.
 2. The payment and inventory callables are emulator-verified only and still need
-   Production deployment plus authenticated Admin browser acceptance. A browser
-   button or transfer reference is not financial proof.
+   Production deployment plus authenticated Production Admin browser acceptance.
+   Local Admin browser acceptance is proven, but a browser button or transfer
+   reference is not financial proof.
 3. GitHub image upload has no approved server-side GitHub App/service in the
    checked repositories. No token was added to frontend code.
 4. Product/category seed data requires a preview and explicit approval before
@@ -376,13 +385,13 @@ Production Firebase data, and it does not push or deploy either repository.
 | RTDB Rules parity | NOT VERIFIED | Local anonymous smoke plus authenticated Firebase Web SDK denial checks passed; Production deployment/parity remains unproven |
 | Super Admin preservation | PASS (read-only) | Both exact UID membership records read back |
 | Live customer render | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered the isolated worktree against synthetic RTDB data; new worktree was not deployed |
-| Live admin render | NOT VERIFIED for new code | Existing deployed page inspected; no mutation attempted |
+| Live admin render | PASS (local Emulator browser); Production NOT VERIFIED | Synthetic Auth Emulator login rendered dashboard, products, categories, orders, discounts, payments, and reports; no Production credentials or mutation |
 | Product/category CRUD | PASS (local callable subset); Production NOT VERIFIED | Synthetic Admin create/read/update, two-image and price readback, category archive, and product-preservation readback passed; full browser acceptance and Production write/readback remain unverified |
 | Published product exposure | PASS (local Rules Emulator); Production NOT VERIFIED | Customer query is constrained to `status == PUBLISHED`, direct product/config writes are disabled, and Admin reads through role-checked callable; local smoke returned 401 unfiltered and only the published fixture, rules were not deployed |
 | Multi-image gallery | BUILD PASS; upload BLOCKED | Admin can select files locally with validation, store image URLs, and Customer can switch among saved URLs; secure GitHub upload service is not present |
 | Published category reflection | BUILD PASS; runtime NOT VERIFIED | Customer subscription and fallback are wired; no authenticated live acceptance |
-| Dashboard metrics | BUILD PASS; runtime NOT VERIFIED | Period filter and Firebase-derived indicators compile; no live Admin session readback |
-| Reports | BUILD PASS; runtime NOT VERIFIED | Derived financial/operational sections and local CSV export compile; no live Admin session readback |
+| Dashboard metrics | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the dashboard and read authorized Firebase-backed data; Production session not tested |
+| Reports | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated local Admin session rendered the report page with synthetic order/payment totals; Production session not tested |
 | Homepage/settings reflection | BUILD PASS; runtime NOT VERIFIED | Admin document editors and Customer hero/header/announcement reflection compile; no live authenticated acceptance |
 | AI assistant settings | BUILD PASS; runtime NOT VERIFIED | Customer reads public settings and disables the preview when configured off; real AI generation remains unavailable |
 | Rendered Customer shell | PASS (local visual smoke only) | CUA DOM snapshot showed RTL layout and navigation; not proof of live Firebase catalog |
@@ -418,7 +427,7 @@ Production Firebase data, and it does not push or deploy either repository.
 | FIREBASE_CONNECTION | PASS | Read-only project/database access |
 | RTDB_RULES | NOT VERIFIED | Local Rules Emulator passed; Production parity not proven |
 | SUPER_ADMIN_ACCOUNTS | PASS | Both supplied UIDs read back unchanged and immutable |
-| DASHBOARD | BUILD PASS; runtime NOT VERIFIED | Firebase-derived dashboard code; no authenticated Admin browser session |
+| DASHBOARD | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered Firebase-derived dashboard; Production session not tested |
 | CATEGORY_CRUD | PASS (local callable); Production NOT VERIFIED | Create/read/archive and product preservation passed in Emulator |
 | DEFAULT_CATEGORIES | BLOCKED | Preview seed exists; no approved Admin credential for write |
 | PRODUCT_CRUD | PASS (local callable); Production NOT VERIFIED | Create/read/update, status boundary, price and image readback passed |
@@ -440,10 +449,10 @@ Production Firebase data, and it does not push or deploy either repository.
 | WHATSAPP_APPROVAL_MESSAGE | BUILD PASS; runtime NOT VERIFIED | Approval URL/message preparation exists; no automatic sending |
 | DELIVERY_AREAS | PASS (local backend + browser) | Enabled fee rendered; disabled area rejected/hidden |
 | STAFF_PERMISSIONS | PASS (Emulator only) | UID linking and Viewer/Employee scope checks passed |
-| HOMEPAGE_BUILDER | BUILD PASS; runtime NOT VERIFIED | Editors and public reflection are wired; no live Admin session |
+| HOMEPAGE_BUILDER | BUILD PASS; runtime NOT VERIFIED | Editors and public reflection are wired; local Admin session covered navigation but no homepage mutation/readback was attempted |
 | AI_ASSISTANT_SETTINGS | BUILD PASS; runtime NOT VERIFIED | Public enable/disable behavior wired; no external AI generation |
-| REPORTS | BUILD PASS; runtime NOT VERIFIED | Derived reports/CSV compile; no live Admin session |
+| REPORTS | PASS (local Emulator browser); Production NOT VERIFIED | Authenticated synthetic Admin browser session rendered derived reports; Production session not tested |
 | ACTIVITY_LOGS | PASS (Emulator only) | Admin mutation/payment/order audit records read back |
 | IMPORT_EXPORT | BUILD PASS; runtime NOT VERIFIED | Merge-only validation compiled; no live Admin session |
 | LIVE_CUSTOMER_TEST | PASS (local Emulator browser); Production NOT VERIFIED | CUA rendered connected synthetic catalog/checkout/favorites |
-| LIVE_ADMIN_TEST | NOT VERIFIED | Google-authenticated Admin browser acceptance not performed |
+| LIVE_ADMIN_TEST | PASS (local Emulator browser); Production NOT VERIFIED | Dev+Emulator-only synthetic Admin login rendered dashboard, products, categories, orders, discounts, payments, and reports; Google-authenticated Production acceptance was not performed |
