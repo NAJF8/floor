@@ -3,7 +3,7 @@ import { auth } from './firebase'
 
 const endpoint = String(import.meta.env.VITE_IMAGE_UPLOAD_ENDPOINT || '').trim()
 
-export type UploadAssetType = 'logo' | 'favicon' | 'cover' | 'banner' | 'hero-media' | 'hero-poster' | 'product' | 'category' | 'occasion' | 'product-extra'
+export type UploadAssetType = 'logo' | 'favicon' | 'cover' | 'banner' | 'hero-media' | 'hero-poster' | 'ai-avatar' | 'product' | 'category' | 'occasion' | 'product-extra'
 export type UploadResult = { url: string; path: string; commitSha?: string; contentType: string; size: number; publicUrlVerified?: boolean }
 export type PreparedUpload = { file: File; previewUrl: string; originalName: string; originalType: string; originalSize: number; converted: boolean }
 

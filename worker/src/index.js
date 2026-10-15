@@ -6,7 +6,7 @@ const ALLOWED_TYPES = new Map([
   ['video/mp4', { extension: 'mp4', magic: bytes => bytes.length >= 12 && new TextDecoder().decode(bytes.slice(4, 8)) === 'ftyp' }],
   ['video/webm', { extension: 'webm', magic: bytes => bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3 }],
 ])
-const ASSET_TYPES = new Set(['logo', 'favicon', 'cover', 'banner', 'hero-media', 'hero-poster', 'product', 'category', 'occasion', 'product-extra'])
+const ASSET_TYPES = new Set(['logo', 'favicon', 'cover', 'banner', 'hero-media', 'hero-poster', 'ai-avatar', 'product', 'category', 'occasion', 'product-extra'])
 const ROLE_ORDER = { VIEWER: 0, EMPLOYEE: 1, MANAGER: 2, ADMIN: 3, SUPER_ADMIN: 4 }
 let certificateCache
 

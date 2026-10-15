@@ -57,6 +57,32 @@ export type ShopPublicConfig = {
   aiAssistant: Record<string, unknown>
 }
 
+export const DEFAULT_HOMEPAGE_CONFIG: Record<string, unknown> = {
+  heroTitle: 'الهدية الأجمل\nتبدأ بتفاصيلك.',
+  heroDescription: 'اختَر باقتك، نسّق ألوانها، وأضف لمستك الخاصة لتصل هديتك كما تخيلتها.',
+  bannerImage: '/floor/alasas-logo.jpg',
+  heroMediaType: 'image',
+  heroMediaUrl: '',
+  heroPosterUrl: '/floor/alasas-logo.jpg',
+  heroVideoEnabled: false,
+  heroFullWidth: false,
+  heroObjectPositionDesktop: 'center',
+  heroObjectPositionTablet: 'center',
+  heroObjectPositionMobile: 'center',
+  featuredCategory: '',
+  shopButtonUrl: '/shop',
+  designButtonUrl: '/design-your-bouquet',
+}
+
+export const DEFAULT_AI_ASSISTANT_CONFIG: Record<string, unknown> = {
+  enabled: true,
+  welcomeMessage: 'هلا بيك! احچيلي عن الباقة اللي ببالك — المناسبة، الألوان، والميزانية إذا عندك.',
+  packageOptions: ['باقة تخرج', 'ورد أحمر وأبيض', 'بحدود ٣٠ ألف'],
+  handoffMessage: 'اقتراحات أولية حسب إعدادات المتجر',
+  assistantAvatarUrl: '',
+  assistantAvatarEnabled: true,
+}
+
 /**
  * Watch one shop's products. Returns an unsubscribe function.
  * Requires explicit, least-privilege Firebase RTDB security rules.
@@ -203,7 +229,7 @@ export function subscribeToShopPublicConfig(
     }
     const aiAssistant = objectValue(value.aiAssistant)
     if (typeof aiAssistant.packageOptions === 'string') aiAssistant.packageOptions = aiAssistant.packageOptions.split(',').map(item => item.trim()).filter(Boolean)
-    onConfig({ paymentMethods, delivery, settings: objectValue(value.settings), homepage: objectValue(value.homepage), aiAssistant })
+    onConfig({ paymentMethods, delivery, settings: objectValue(value.settings), homepage: { ...DEFAULT_HOMEPAGE_CONFIG, ...objectValue(value.homepage) }, aiAssistant: { ...DEFAULT_AI_ASSISTANT_CONFIG, ...aiAssistant } })
   }
   const stops = ['paymentMethods', 'delivery', 'settings', 'homepage', 'aiAssistant'].map(key => onValue(ref(firebaseDatabase, `shops/${shopId}/public/${key}`), snapshot => { const next = snapshot.val(); value = { ...value, [key]: next && typeof next === 'object' && !Array.isArray(next) ? next as Record<string, unknown> : {} }; emit() }, onError))
   return () => stops.forEach(stop => stop())
