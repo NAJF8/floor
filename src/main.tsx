@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { HashRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Heart, Instagram, Menu, Minus, Package, Palette, Phone, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, X, Zap } from 'lucide-react'
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
@@ -28,7 +28,7 @@ function syncFavoriteIdsToAccount(ids: string[], replace = true) { if (!firebase
 function toggleFavoriteId(id: string): boolean { const current = readFavoriteIds(); const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem(favoriteStorageKey, JSON.stringify(next)); syncFavoriteIdsToAccount(next, true); window.dispatchEvent(new Event('alasas-favorites-changed')); return next.includes(id) }
 function FavoriteAccountSync() { useEffect(() => onAuthStateChanged(firebaseAuth, user => { if (!user) return; const localIds = readFavoriteIds(); void httpsCallable(firebaseFunctions, 'syncCustomerFavorites')({ favoriteIds: localIds, replace: false }).then(result => { const data = result.data as { favoriteIds?: unknown }; const ids = Array.isArray(data.favoriteIds) ? data.favoriteIds.filter((id): id is string => typeof id === 'string') : localIds; localStorage.setItem(favoriteStorageKey, JSON.stringify(ids)); window.dispatchEvent(new Event('alasas-favorites-changed')) }).catch(() => undefined) }), []); return null }
 
-type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; publicConfig: ShopPublicConfig }
+type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; retry: () => void; publicConfig: ShopPublicConfig }
 const CatalogContext = createContext<CatalogState | null>(null)
 const fallbackProductImage = `${import.meta.env.BASE_URL}alasas-logo.jpg`
 function mapCatalogProduct(record: FlowerProductRecord): Product {
@@ -63,11 +63,19 @@ function CatalogProvider({ children }: { children: React.ReactNode }) {
   const [categoryRecords, setCategoryRecords] = useState<FlowerCategoryRecord[]>([])
   const [publicConfig, setPublicConfig] = useState<ShopPublicConfig>({ paymentMethods: {}, delivery: {}, settings: {}, homepage: {}, aiAssistant: {} })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  useEffect(() => subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false) }, reason => { setError(reason.message); setLoading(false) }), [])
-  useEffect(() => subscribeToShopDemoProducts('floor-232bc', setDemoRecords, () => undefined), [])
-  useEffect(() => subscribeToShopCategories('floor-232bc', setCategoryRecords, reason => setError(reason.message)), [])
-  useEffect(() => subscribeToShopPublicConfig('floor-232bc', setPublicConfig, reason => setError(reason.message)), [])
+  const [sourceErrors, setSourceErrors] = useState<Record<string, string>>({})
+  const [retryToken, setRetryToken] = useState(0)
+  const setSourceError = (source: string, reason?: Error) => setSourceErrors(current => {
+    const next = { ...current }
+    if (reason) next[source] = reason.message || 'تعذر الاتصال بـ Firebase.'
+    else delete next[source]
+    return next
+  })
+  const retry = () => setRetryToken(value => value + 1)
+  useEffect(() => { setLoading(true); return subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false); setSourceError('products') }, reason => { setSourceError('products', reason); setLoading(false) }) }, [retryToken])
+  useEffect(() => subscribeToShopDemoProducts('floor-232bc', value => { setDemoRecords(value); setSourceError('demoProducts') }, reason => setSourceError('demoProducts', reason)), [retryToken])
+  useEffect(() => subscribeToShopCategories('floor-232bc', value => { setCategoryRecords(value); setSourceError('categories') }, reason => setSourceError('categories', reason)), [retryToken])
+  useEffect(() => subscribeToShopPublicConfig('floor-232bc', value => { setPublicConfig(value); setSourceError('publicConfig') }, reason => setSourceError('publicConfig', reason)), [retryToken])
   useEffect(() => {
     const settings = publicConfig.settings as Record<string, unknown>
     const assistant = publicConfig.aiAssistant as Record<string, unknown>
@@ -94,15 +102,16 @@ function CatalogProvider({ children }: { children: React.ReactNode }) {
   const liveProducts = records.map(mapCatalogProduct)
   const demoProducts = demoRecords.map(mapCatalogProduct)
   const liveCategories: [string, string, string][] = categoryRecords.map(record => [record.name, record.description || 'اكتشف تشكيلات الأساس', record.image || 'photo-1523438885200-e635ba2c371e'])
-  return <CatalogContext.Provider value={{ products: [...liveProducts, ...demoProducts], categories: liveCategories, live: liveProducts.length > 0, loading, error, publicConfig }}>{children}</CatalogContext.Provider>
+  const error = Object.values(sourceErrors).find(Boolean) || ''
+  return <CatalogContext.Provider value={{ products: [...liveProducts, ...demoProducts], categories: liveCategories, live: liveProducts.length > 0, loading, error, retry, publicConfig }}>{children}</CatalogContext.Provider>
 }
 function useCatalog() { const value = useContext(CatalogContext); if (!value) throw new Error('useCatalog must be used inside CatalogProvider'); return value }
 function CatalogConnectionNotice() {
-  const { loading, error } = useCatalog(); const [online, setOnline] = useState(() => navigator.onLine)
+  const { loading, error, retry } = useCatalog(); const [online, setOnline] = useState(() => navigator.onLine)
   useEffect(() => { const changed = () => setOnline(navigator.onLine); window.addEventListener('online', changed); window.addEventListener('offline', changed); return () => { window.removeEventListener('online', changed); window.removeEventListener('offline', changed) } }, [])
   if (!online) return <div className="demo-note" role="status">أنت غير متصل حالياً؛ ستتحدث البيانات تلقائياً بعد عودة الاتصال.</div>
   if (loading) return <div className="demo-note" role="status">جارٍ تحميل الكتالوج من Firebase...</div>
-  if (error) return <div className="demo-note" role="alert">تعذر تحديث الكتالوج الآن؛ ستتم إعادة المحاولة عند عودة الاتصال.</div>
+  if (error) return <div className="demo-note" role="alert">تعذر تحديث بيانات Firebase؛ لم نستخدم بيانات بديلة. <button type="button" onClick={retry}>إعادة المحاولة</button></div>
   return null
 }
 
@@ -285,7 +294,7 @@ function CheckoutConnected({ cart }: { cart: CartState }) {
     const productsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId} × ${item.quantity}` }).join('\n')
     const packagingText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId}: ${item.packagingColor || item.packaging || product?.packaging || 'غير محدد'}` }).join('\n')
     const addOnsText = availableItems.map(item => { const product = catalogProducts.find(candidate => candidate.id === item.productId); return `${product?.name || item.productId}: ${item.addOns?.join('، ') || product?.addOns?.join('، ') || 'لا توجد'}` }).join('\n')
-    const trackingUrl = `${window.location.origin}${import.meta.env.BASE_URL}track-order?order=${encodeURIComponent(orderId)}`
+    const trackingUrl = `${window.location.origin}${import.meta.env.BASE_URL}#/track-order?order=${encodeURIComponent(orderId)}`
     const message = [`طلب جديد — ${String(publicConfig.settings.storeName || 'AL ASAS')}`, `رقم الطلب: ${orderId}`, `اسم الزبون: ${customerName}`, `رقم الهاتف: ${phone}`, `المستلم: ${recipientName}`, `المنتجات:\n${productsText}`, `التغليف:\n${packagingText}`, `الإضافات:\n${addOnsText}`, `رسالة الإهداء: ${giftMessage || 'لا توجد'}`, `المحافظة: ${province}`, `المنطقة: ${district}`, `العنوان: ${address}`, `موعد التوصيل: ${deliveryAt}`, `الإجمالي: ${money(total)}`, `طريقة الدفع: ${method.name}`, `مرجع التحويل: ${transferReference || 'لا يوجد'}`, `حالة الدفع: ${selectedPayment?.type === 'CASH' ? 'غير مدفوع' : 'بانتظار المراجعة'}`, `رابط الطلب: ${trackingUrl}`].join('\n')
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
   }
@@ -318,5 +327,5 @@ function EmptyState({ title, text, link }: { title: string; text: string; link?:
 function NotFound() { return <main className="page"><EmptyState title="هذه الصفحة غير موجودة" text="خلّينا نرجعك للمكان الصحيح." link="/" /></main> }
 function Footer() { const { live, error } = useCatalog(); const catalogStatus = error ? 'تعذر الاتصال بكتالوج Firebase' : live ? 'الكتالوج متصل ببيانات المتجر' : 'عرض تجريبي — لا توجد منتجات منشورة في Firebase'; return <footer className="footer"><div className="container footer-grid"><div className="footer-brand"><Link to="/" className="brand"><img src={logo} alt="الأساس" /><span><b>الأساس</b><small>من الأساس تبدأ الفكرة</small></span></Link><p>منصة تجارة الزهور والهدايا التي تعطي كل متجر مساحته الخاصة.</p><div className="socials"><Instagram size={17} /><Phone size={17} /><span>واتساب</span></div></div><div><h4>تسوّق</h4><Link to="/shop">كل المنتجات</Link><Link to="/shop?category=باقات الورد">باقات الورد</Link><Link to="/shop?category=بوكسات الهدايا">بوكسات الهدايا</Link><Link to="/design-your-bouquet">صمّم باقتك</Link></div><div><h4>المساعدة</h4><Link to="/track-order">تتبّع الطلب</Link><Link to="/account">حسابي</Link><a>معلومات التوصيل</a><a>الأسئلة الشائعة</a></div><div className="footer-contact"><h4>خلّينا على تواصل</h4><p>نرتبها سوا، من أول فكرة لآخر لمسة.</p><a href="tel:+9647700000000"><Phone size={15} /> +964 770 000 0000</a><a href="mailto:hello@alasas.example"><Send size={15} /> hello@alasas.example</a></div></div><div className="container footer-bottom"><span>© 2024 AL ASAS · {catalogStatus}</span><span>صنع بـ <span className="lime-text">●</span> في العراق</span></div></footer> }
 
-createRoot(document.getElementById('root')!).render(<BrowserRouter basename={import.meta.env.BASE_URL}><App /></BrowserRouter>)
+createRoot(document.getElementById('root')!).render(<HashRouter><App /></HashRouter>)
 

@@ -337,7 +337,7 @@ const orderStatuses = [
 function approvalWhatsAppUrl(item: Row) {
   const phone = valueText(item.phone).replace(/\D/g, '')
   if (!phone) return ''
-  const orderId = valueText(item.id); const customer = valueText(item.customerName || 'زبوننا'); const store = 'AL ASAS'; const tracking = `https://najf8.github.io/floor/track-order?order=${encodeURIComponent(orderId)}`
+  const orderId = valueText(item.id); const customer = valueText(item.customerName || 'زبوننا'); const store = 'AL ASAS'; const tracking = `https://najf8.github.io/floor/#/track-order?order=${encodeURIComponent(orderId)}`
   const message = [`مرحباً ${customer} 🌹`, `تمت الموافقة على طلبك رقم ${orderId}.`, 'تم تأكيد استلام المبلغ من الإدارة.', 'طلبك حالياً قيد التجهيز.', `موعد التوصيل المتوقع: ${valueText(item.deliveryAt || 'سيتم التنسيق معك')}`, `رابط التتبع: ${tracking}`, `شكراً لاختيارك ${store}.`].join('\n')
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 }
