@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, BadgePercent, Bell, Check, ChevronDown, CircleUserRound, Heart, Instagram, Menu, Minus, Package, Palette, Phone, Plus, Search, Send, ShoppingBag, Sparkles, Star, Truck, X, Zap } from 'lucide-react'
 import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
+import { get, ref, set } from 'firebase/database'
 import './styles.css'
 import './store-theme.css'
 import { DEFAULT_AI_ASSISTANT_CONFIG, DEFAULT_HOMEPAGE_CONFIG, EMPTY_GIFT_CONFIG, subscribeToShopCategories, subscribeToShopDemoProducts, subscribeToShopGiftConfig, subscribeToShopProducts, subscribeToShopPublicConfig, type FlowerCategoryRecord, type FlowerProductRecord, type GiftConfig, type PaymentMethodRecord, type ShopPublicConfig } from './flowerRepository'
-import { firebaseAuth, firebaseFunctions, googleProvider } from './firebase'
+import { firebaseAuth, firebaseDatabase, firebaseFunctions, googleProvider } from './firebase'
 import { AdminApp } from './adminApp'
 import { AdminGate } from './adminAuth'
 
@@ -25,10 +26,11 @@ const configuredImage = (value: unknown, fallback: string) => typeof value === '
 type Product = { id: string; name: string; en: string; price: number; compareAtPrice?: number; discountPercent?: number; category: string; image: string; imageUrls?: string[]; badge?: string; packaging?: string; colors?: string[]; addOns?: string[]; flowerType?: string; occasions?: string[]; featured?: boolean; bestseller?: boolean; isNew?: boolean; stock?: number; tone: string; description: string; demo?: boolean; orderable?: boolean }
 const money = (n: number) => `${n.toLocaleString('en-US')} د.ع`
 const favoriteStorageKey = 'alasas-favorites'
-function readFavoriteIds(): string[] { try { const value = JSON.parse(localStorage.getItem(favoriteStorageKey) || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [] } catch { return [] } }
-function syncFavoriteIdsToAccount(ids: string[], replace = true) { if (!firebaseAuth.currentUser) return; void httpsCallable(firebaseFunctions, 'syncCustomerFavorites')({ favoriteIds: ids, replace }).catch(() => undefined) }
-function toggleFavoriteId(id: string): boolean { const current = readFavoriteIds(); const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem(favoriteStorageKey, JSON.stringify(next)); syncFavoriteIdsToAccount(next, true); window.dispatchEvent(new Event('alasas-favorites-changed')); return next.includes(id) }
-function FavoriteAccountSync() { useEffect(() => onAuthStateChanged(firebaseAuth, user => { if (!user) return; const localIds = readFavoriteIds(); void httpsCallable(firebaseFunctions, 'syncCustomerFavorites')({ favoriteIds: localIds, replace: false }).then(result => { const data = result.data as { favoriteIds?: unknown }; const ids = Array.isArray(data.favoriteIds) ? data.favoriteIds.filter((id): id is string => typeof id === 'string') : localIds; localStorage.setItem(favoriteStorageKey, JSON.stringify(ids)); window.dispatchEvent(new Event('alasas-favorites-changed')) }).catch(() => undefined) }), []); return null }
+function favoriteKey() { return `${favoriteStorageKey}:${firebaseAuth.currentUser?.uid || 'guest'}` }
+function readFavoriteIds(): string[] { try { const value = JSON.parse(localStorage.getItem(favoriteKey()) || '[]'); return Array.isArray(value) ? [...new Set(value.filter((id): id is string => typeof id === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(id)))].slice(0, 200) : [] } catch { return [] } }
+async function syncFavoriteIdsToAccount(ids: string[]) { const user = firebaseAuth.currentUser; if (!user) return; await set(ref(firebaseDatabase, `users/${user.uid}/favorites`), Object.fromEntries(ids.slice(0, 200).map(id => [id, true]))) }
+function toggleFavoriteId(id: string): boolean { const current = readFavoriteIds(); const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem(favoriteKey(), JSON.stringify(next)); void syncFavoriteIdsToAccount(next).catch(() => undefined); window.dispatchEvent(new Event('alasas-favorites-changed')); return next.includes(id) }
+function FavoriteAccountSync() { useEffect(() => onAuthStateChanged(firebaseAuth, user => { if (!user) return; const guestIds = (() => { try { const value = JSON.parse(localStorage.getItem(`${favoriteStorageKey}:guest`) || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [] } catch { return [] } })(); void get(ref(firebaseDatabase, `users/${user.uid}/favorites`)).then(snapshot => { const accountIds = snapshot.exists() && snapshot.val() && typeof snapshot.val() === 'object' ? Object.entries(snapshot.val()).filter(([, value]) => value === true).map(([id]) => id) : []; const ids = [...new Set([...accountIds, ...guestIds])].slice(0, 200); localStorage.setItem(`${favoriteStorageKey}:${user.uid}`, JSON.stringify(ids)); return syncFavoriteIdsToAccount(ids) }).then(() => { localStorage.removeItem(`${favoriteStorageKey}:guest`); window.dispatchEvent(new Event('alasas-favorites-changed')) }).catch(() => undefined) }), []); return null }
 
 type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; retry: () => void; publicConfig: ShopPublicConfig; giftConfig: GiftConfig }
 const CatalogContext = createContext<CatalogState | null>(null)

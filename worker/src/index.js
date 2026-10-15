@@ -1,4 +1,6 @@
 const MAX_BYTES = 8 * 1024 * 1024
+import { handleGiftingRequest } from './gifting-api.js'
+
 const ALLOWED_TYPES = new Map([
   ['image/jpeg', { extension: 'jpg', magic: bytes => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff }],
   ['image/png', { extension: 'png', magic: bytes => bytes.length >= 8 && bytes.slice(0, 8).every((byte, index) => byte === [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a][index]) }],
@@ -219,4 +221,8 @@ export async function handleUpload(request, env) {
   }
 }
 
-export default { async fetch(request, env) { return handleUpload(request, env) } }
+export default { async fetch(request, env) {
+  const pathname = new URL(request.url).pathname
+  if (pathname === '/api/admin/gifting' || pathname.startsWith('/api/admin/gifting/')) return handleGiftingRequest(request, env)
+  return handleUpload(request, env)
+} }

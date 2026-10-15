@@ -53,6 +53,8 @@ async function expectAllowed(label, operation) {
 const identities = {}
 for (const label of Object.keys(roles)) identities[label] = await createIdentity(label)
 identities.unauthorized = await createIdentity('unauthorized')
+identities.customerA = await createIdentity('customer-a')
+identities.customerB = await createIdentity('customer-b')
 
 const seed = {
   shopMemberships: Object.fromEntries(Object.entries(roles).map(([label, record]) => [identities[label].uid, { [shopId]: { ...record, active: true, email: identities[label].email } }])),
@@ -86,6 +88,8 @@ const manager = await clientFor(identities.manager)
 const employee = await clientFor(identities.employee)
 const viewer = await clientFor(identities.viewer)
 const unauthorized = await clientFor(identities.unauthorized)
+const customerA = await clientFor(identities.customerA)
+const customerB = await clientFor(identities.customerB)
 
 const productsRef = `shops/${shopId}/products`
 const categoriesRef = `shops/${shopId}/public/categories`
@@ -131,7 +135,13 @@ assert.equal(after, before + 2)
 await expectDenied('membership self-write denied', () => set(ref(admin.db, `shopMemberships/${identities.admin.uid}/${shopId}/role`), 'SUPER_ADMIN'))
 await expectDenied('private order direct read denied', () => get(ref(manager.db, `shops/${shopId}/private/orders`)))
 
-for (const client of [anonymous, admin, manager, employee, viewer, unauthorized]) {
+await expectAllowed('customer A writes own favorites', () => set(ref(customerA.db, `users/${identities.customerA.uid}/favorites`), { published: true }))
+await expectAllowed('customer A reads own favorites after refresh', () => get(ref(customerA.db, `users/${identities.customerA.uid}/favorites`)))
+await expectDenied('customer B cannot read customer A favorites', () => get(ref(customerB.db, `users/${identities.customerA.uid}/favorites`)))
+await expectDenied('customer B cannot write customer A favorites', () => set(ref(customerB.db, `users/${identities.customerA.uid}/favorites/hidden`), true))
+await expectAllowed('customer A removes own favorites', () => set(ref(customerA.db, `users/${identities.customerA.uid}/favorites`), {}))
+
+for (const client of [anonymous, admin, manager, employee, viewer, unauthorized, customerA, customerB]) {
   await signOut(client.auth).catch(() => undefined)
   await deleteApp(client.app)
 }
