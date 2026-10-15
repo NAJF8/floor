@@ -236,6 +236,9 @@ export function subscribeToShopCategories(
     for (const [id, item] of Object.entries(value)) {
       if (!item || typeof item !== 'object' || Array.isArray(item)) continue
       const record = item as Record<string, unknown>
+      // Demo categories are a separate projection and must never be presented
+      // as the store's published Production taxonomy.
+      if (record.demoTag === 'ALASAS_DEMO_V1') continue
       if (typeof record.name !== 'string' || record.visible === false || ['HIDDEN', 'DRAFT', 'ARCHIVED'].includes(String(record.status || '').toUpperCase())) continue
       categories.push({ id, name: record.name, ...(typeof record.description === 'string' ? { description: record.description } : {}), ...(typeof record.image === 'string' ? { image: record.image } : {}), ...(Number.isInteger(record.order) ? { order: record.order as number } : {}), ...(typeof record.status === 'string' ? { status: record.status } : {}), visible: true })
     }
