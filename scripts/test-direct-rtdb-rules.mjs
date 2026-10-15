@@ -7,7 +7,9 @@ import { getDatabase as getAdminDatabase } from 'firebase-admin/database'
 
 const projectId = 'floor-232bc'
 const shopId = projectId
-const databaseUrl = `http://127.0.0.1:9000?ns=${projectId}-default-rtdb`
+const databaseHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST || '127.0.0.1:9000'
+const [databaseAddress, databasePort] = databaseHost.split(':')
+const databaseUrl = `http://${databaseHost}?ns=${projectId}-default-rtdb`
 const runId = Date.now().toString(36)
 const adminApp = getAdminApps()[0] || initializeAdminApp({ projectId, databaseURL: databaseUrl })
 const adminDb = getAdminDatabase(adminApp)
@@ -32,7 +34,7 @@ async function clientFor(identity) {
   const auth = getAuth(app)
   const db = getDatabase(app)
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
-  connectDatabaseEmulator(db, '127.0.0.1', 9000)
+  connectDatabaseEmulator(db, databaseAddress, Number(databasePort))
   if (identity) await signInWithEmailAndPassword(auth, identity.email, 'StrongPass123!')
   return { app, auth, db }
 }
@@ -133,4 +135,4 @@ for (const client of [anonymous, admin, manager, employee, viewer, unauthorized]
   await signOut(client.auth).catch(() => undefined)
   await deleteApp(client.app)
 }
-console.log('DIRECT_RTDB_RULES_TESTS_PASS')
+console.log('DIRECT_RTDB_RULES_TESTS_PASS'); process.exit(0)

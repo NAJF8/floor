@@ -117,6 +117,9 @@ function optionalAdminBoolean(value, field) {
 function optionalAdminStringArray(value, field, maxItems = 50, maxLength = 240) {
   if (value !== undefined && (!Array.isArray(value) || value.length > maxItems || value.some((item) => typeof item !== 'string' || item.length > maxLength))) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
 }
+function optionalAdminIntegerArray(value, field, maxItems = 50, min = 0, max = 1000000) {
+  if (value !== undefined && (!Array.isArray(value) || value.length > maxItems || value.some((item) => !Number.isInteger(item) || item < min || item > max))) throw new HttpsError('invalid-argument', `Invalid ${field}.`)
+}
 
 function validateInventoryRecipe(value) {
   if (value === undefined) return
@@ -199,6 +202,34 @@ function validateAdminValue(path, operation, rawValue) {
     optionalAdminBoolean(value.active, 'discount active state')
     optionalAdminString(value.startsAt, 'discount start', 80)
     optionalAdminString(value.endsAt, 'discount end', 80)
+    return
+  }
+  if (suffix.startsWith('public/gifting')) {
+    const giftSuffix = suffix.slice('public/gifting'.length).replace(/^\//, '')
+    if (giftSuffix === 'settings') {
+      optionalAdminInteger(value.maxCardMessageLength, 'maximum card message length', { min: 1, max: 2000 })
+      optionalAdminInteger(value.preparationHours, 'bouquet preparation hours', { min: 0, max: 720 })
+      optionalAdminIntegerArray(value.availableDays, 'gifting available days', 7, 0, 6)
+      return
+    }
+    const giftGroup = ['addons', 'cards', 'occasions', 'flowerTypes', 'flowerColors', 'stemCounts', 'wrappings', 'wrappingColors', 'ribbons'].find(group => giftSuffix === group || giftSuffix.startsWith(`${group}/`))
+    if (!giftGroup) throw new HttpsError('invalid-argument', 'Invalid gifting collection.')
+    optionalAdminString(value.name, 'gift add-on name', 160)
+    optionalAdminString(value.label, 'gifting option label', 120)
+    optionalAdminString(value.nameEn, 'gifting English name', 160)
+    optionalAdminString(value.labelEn, 'gifting English label', 120)
+    optionalAdminString(value.category, 'gift add-on category', 80)
+    optionalAdminString(value.text, 'greeting card text', 500)
+    optionalAdminString(value.occasion, 'card occasion', 120)
+    optionalAdminString(value.image, 'gifting image', 1000)
+    optionalAdminInteger(value.price, 'gifting price', { min: 0, max: 1000000000 })
+    optionalAdminInteger(value.stock, 'gift add-on stock', { min: 0, max: 1000000 })
+    optionalAdminInteger(value.order, 'gifting display order', { min: 0, max: 1000000 })
+    optionalAdminBoolean(value.enabled, 'gifting enabled state')
+    optionalAdminBoolean(value.bouquetCompatible, 'bouquet compatibility')
+    if (giftGroup === 'cards' && operation === 'create' && (typeof value.text !== 'string' || !value.text.trim())) throw new HttpsError('invalid-argument', 'Greeting card text is required.')
+    if (giftGroup === 'addons' && operation === 'create' && (typeof value.name !== 'string' || !value.name.trim())) throw new HttpsError('invalid-argument', 'Gift add-on name is required.')
+    if (!['cards', 'addons'].includes(giftGroup) && operation === 'create' && (typeof value.label !== 'string' || !value.label.trim())) throw new HttpsError('invalid-argument', 'Gifting option label is required.')
     return
   }
   if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) {

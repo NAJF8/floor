@@ -47,7 +47,7 @@ export type PaymentMethodRecord = {
   order?: number
 }
 
-export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?: string }
+export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?: string; availableDays?: number[]; timeSlots?: string[]; preparationHours?: number; preorderDates?: string[] }
 export type DeliveryProvinceRecord = { enabled?: boolean; areas?: Record<string, DeliveryAreaRecord>; districts?: Record<string, DeliveryAreaRecord> }
 export type GiftAddonRecord = { id: string; name: string; nameEn?: string; category?: string; price: number; image?: string; stock?: number; enabled: boolean; bouquetCompatible: boolean; order?: number }
 export type BouquetOptionRecord = { id: string; label: string; labelEn?: string; price: number; image?: string; enabled: boolean; order?: number }
@@ -277,7 +277,14 @@ export function subscribeToShopPublicConfig(
         const normalizedAreas: Record<string, DeliveryAreaRecord> = {}
         for (const [district, area] of Object.entries(areas)) {
           const areaRecord = area as Record<string, unknown>
-          if (Number.isInteger(areaRecord.price) && (areaRecord.price as number) >= 0 && areaRecord.enabled !== false) normalizedAreas[district] = { price: areaRecord.price as number, ...(typeof areaRecord.deliveryAt === 'string' ? { deliveryAt: areaRecord.deliveryAt } : {}) }
+          if (Number.isInteger(areaRecord.price) && (areaRecord.price as number) >= 0 && areaRecord.enabled !== false) normalizedAreas[district] = {
+            price: areaRecord.price as number,
+            ...(typeof areaRecord.deliveryAt === 'string' ? { deliveryAt: areaRecord.deliveryAt } : {}),
+            ...(Array.isArray(areaRecord.availableDays) ? { availableDays: areaRecord.availableDays.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6) } : {}),
+            ...(Array.isArray(areaRecord.timeSlots) ? { timeSlots: areaRecord.timeSlots.filter((slot): slot is string => typeof slot === 'string' && slot.length <= 80) } : {}),
+            ...(Number.isInteger(areaRecord.preparationHours) && (areaRecord.preparationHours as number) >= 0 ? { preparationHours: areaRecord.preparationHours as number } : {}),
+            ...(Array.isArray(areaRecord.preorderDates) ? { preorderDates: areaRecord.preorderDates.filter((date): date is string => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) } : {}),
+          }
         }
         delivery[province] = { enabled: record.enabled !== false, areas: normalizedAreas }
       }

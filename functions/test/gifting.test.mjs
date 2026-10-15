@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict'
+import test from 'node:test'
+import { calculateGiftingTotal, deliveryIsAvailable } from '../src/gifting.js'
+
+const config = { flowerTypes: { rose: { label: 'Rose', price: 30000, enabled: true } }, addons: { chocolate: { name: 'Chocolate', price: 12000, enabled: true, stock: 3 } }, cards: { birthday: { text: 'Happy birthday', price: 2500, enabled: true } } }
+test('gifting price uses Firebase values and includes delivery', () => { const result = calculateGiftingTotal({ config, product: { price: 40000, status: 'PUBLISHED', active: true }, optionIds: { flowerTypes: 'rose' }, addonIds: ['chocolate'], cardId: 'birthday', deliveryFee: 5000 }); assert.deepEqual(result, { total: 89500, product: 40000, customization: 44500, deliveryFee: 5000 }) })
+test('hidden, deleted, or out-of-stock options cannot be priced', () => { assert.throws(() => calculateGiftingTotal({ config, product: { price: 1, status: 'PUBLISHED', active: true }, addonIds: ['missing'] }), /GIFTING_OPTION_UNAVAILABLE/); config.addons.chocolate.stock = 0; assert.throws(() => calculateGiftingTotal({ config, product: { price: 1, status: 'PUBLISHED', active: true }, addonIds: ['chocolate'] }), /GIFTING_OPTION_OUT_OF_STOCK/); config.addons.chocolate.stock = 3 })
+test('delivery rejects unavailable weekday and slot', () => { const area = { enabled: true, price: 5000, availableDays: [1], timeSlots: ['09:00-12:00'] }; assert.equal(deliveryIsAvailable(area, '2026-10-19T10:00'), true); assert.equal(deliveryIsAvailable(area, '2026-10-20T10:00'), false); assert.equal(deliveryIsAvailable(area, '2026-10-19T14:00'), false) })
