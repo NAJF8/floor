@@ -22,7 +22,11 @@ googleProvider.setCustomParameters({ prompt: 'select_account' })
 export function getFirebaseDatabase() { return getDatabase(firebaseApp) }
 export function getFirebaseFunctions() { return getFunctions(firebaseApp, 'europe-west1') }
 if (import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
-  try { connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true }) } catch { /* already connected during local HMR */ }
-  try { connectDatabaseEmulator(getFirebaseDatabase(), '127.0.0.1', 9000) } catch { /* already connected during local HMR */ }
-  try { connectFunctionsEmulator(getFirebaseFunctions(), '127.0.0.1', 5001) } catch { /* already connected during local HMR */ }
+  const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST || '127.0.0.1'
+  const authPort = Number(import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT || 9099)
+  const databasePort = Number(import.meta.env.VITE_FIREBASE_DATABASE_EMULATOR_PORT || 9000)
+  const functionsPort = Number(import.meta.env.VITE_FIREBASE_FUNCTIONS_EMULATOR_PORT || 5001)
+  try { connectAuthEmulator(auth, `http://${host}:${authPort}`, { disableWarnings: true }) } catch { /* already connected during local HMR */ }
+  try { connectDatabaseEmulator(getFirebaseDatabase(), host, databasePort) } catch { /* already connected during local HMR */ }
+  try { connectFunctionsEmulator(getFirebaseFunctions(), host, functionsPort) } catch { /* already connected during local HMR */ }
 }

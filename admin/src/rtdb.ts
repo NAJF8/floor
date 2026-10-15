@@ -1,5 +1,7 @@
 import { get, onValue, push, ref, runTransaction, update, type Unsubscribe } from 'firebase/database'
 import { getFirebaseDatabase, SHOP_ID } from './firebase'
+import { httpsCallable } from 'firebase/functions'
+import { getFirebaseFunctions } from './firebase'
 
 export const shopPath = (suffix: string) => `shops/${SHOP_ID}/${suffix}`
 
@@ -13,11 +15,13 @@ const directRoots = [
   `shops/${SHOP_ID}/public/homepage`,
   `shops/${SHOP_ID}/public/settings`,
   `shops/${SHOP_ID}/public/aiAssistant`,
+  `shops/${SHOP_ID}/public/gifting`,
   `shops/${SHOP_ID}/private/inventory`,
 ]
 
 const isDirectPath = (path: string) => directRoots.some(root => path === root || path.startsWith(`${root}/`))
 const backendRequired = () => new Error('هذه العملية تتطلب Backend موثوقاً؛ لم يتم تفعيل Cloud Functions في هذا المسار.')
+const isGiftingPath = (path: string) => path.startsWith(`shops/${SHOP_ID}/public/gifting`)
 const ensureDirectPath = (path: string) => { if (!isDirectPath(path)) throw backendRequired() }
 
 export function subscribeMap<T>(path: string, callback: (value: Record<string, T>) => void, onError?: (error: Error) => void): Unsubscribe {
@@ -35,8 +39,9 @@ async function verifyReadback(path: string, expected: unknown) {
   } else if (JSON.stringify(snapshot.val()) !== JSON.stringify(expected)) throw new Error(`Firebase readback failed: ${path}.`)
 }
 async function verifyPaths(updates: Record<string, unknown>) { await Promise.all(Object.entries(updates).map(([path, value]) => verifyReadback(path, value))) }
-export async function createRecord<T extends object>(path: string, value: T) { ensureDirectPath(path); const record = push(ref(getFirebaseDatabase(), path)); const target = `${path}/${record.key}`; await update(ref(getFirebaseDatabase()), { [target]: value }); await verifyReadback(target, value); return record.key as string }
-export async function updateRecord(path: string, value: object) { ensureDirectPath(path); await update(ref(getFirebaseDatabase(), path), value); await verifyReadback(path, value) }
+async function giftingWrite(operation: 'create' | 'update', path: string, value: object) { const call = httpsCallable(getFirebaseFunctions(), 'adminWrite'); const result = await call({ operation, path, value }); const data = result.data as { key?: string }; const target = operation === 'create' ? `${path}/${data.key}` : path; await verifyReadback(target, value); return data.key }
+export async function createRecord<T extends object>(path: string, value: T) { ensureDirectPath(path); if (isGiftingPath(path)) return giftingWrite('create', path, value); const record = push(ref(getFirebaseDatabase(), path)); const target = `${path}/${record.key}`; await update(ref(getFirebaseDatabase()), { [target]: value }); await verifyReadback(target, value); return record.key as string }
+export async function updateRecord(path: string, value: object) { ensureDirectPath(path); if (isGiftingPath(path)) { await giftingWrite('update', path, value); return } await update(ref(getFirebaseDatabase(), path), value); await verifyReadback(path, value) }
 export async function updatePaths(updates: Record<string, unknown>) { Object.keys(updates).forEach(ensureDirectPath); await update(ref(getFirebaseDatabase()), updates); await verifyPaths(updates) }
 export async function createRecordWithPaths<T extends object>(path: string, value: T, extra: (id: string) => Record<string, unknown> = () => ({})) { ensureDirectPath(path); const record = push(ref(getFirebaseDatabase(), path)); const target = `${path}/${record.key}`; const updates = { [target]: value, ...extra(record.key as string) }; Object.keys(updates).forEach(ensureDirectPath); await update(ref(getFirebaseDatabase()), updates); await verifyPaths(updates); return record.key as string }
 export async function updateInventoryTransaction<T>(path: string, updater: (current: T | null) => T | null) { ensureDirectPath(path); const result = await runTransaction(ref(getFirebaseDatabase(), path), current => updater(current as T | null)); if (!result.committed) throw new Error('تعذر تثبيت تحديث المخزون بسبب تعارض متزامن.') }

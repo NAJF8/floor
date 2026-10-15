@@ -47,8 +47,23 @@ export type PaymentMethodRecord = {
   order?: number
 }
 
-export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?: string }
+export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?: string; availableDays?: number[]; timeSlots?: string[]; preparationHours?: number; preorderDates?: string[] }
 export type DeliveryProvinceRecord = { enabled?: boolean; areas?: Record<string, DeliveryAreaRecord>; districts?: Record<string, DeliveryAreaRecord> }
+export type GiftAddonRecord = { id: string; name: string; nameEn?: string; category?: string; price: number; image?: string; stock?: number; enabled: boolean; bouquetCompatible: boolean; order?: number }
+export type BouquetOptionRecord = { id: string; label: string; labelEn?: string; price: number; image?: string; enabled: boolean; order?: number }
+export type GreetingCardTemplateRecord = { id: string; occasion?: string; text: string; price: number; enabled: boolean; order?: number }
+export type GiftConfig = {
+  flowerTypes: BouquetOptionRecord[]
+  flowerColors: BouquetOptionRecord[]
+  stemCounts: BouquetOptionRecord[]
+  wrappings: BouquetOptionRecord[]
+  wrappingColors: BouquetOptionRecord[]
+  ribbons: BouquetOptionRecord[]
+  addons: GiftAddonRecord[]
+  cards: GreetingCardTemplateRecord[]
+  occasions: BouquetOptionRecord[]
+  settings: Record<string, unknown>
+}
 export type ShopPublicConfig = {
   paymentMethods: Record<string, PaymentMethodRecord>
   delivery: Record<string, DeliveryProvinceRecord>
@@ -81,6 +96,46 @@ export const DEFAULT_AI_ASSISTANT_CONFIG: Record<string, unknown> = {
   handoffMessage: 'اقتراحات أولية حسب إعدادات المتجر',
   assistantAvatarUrl: '',
   assistantAvatarEnabled: true,
+}
+
+export const EMPTY_GIFT_CONFIG: GiftConfig = { flowerTypes: [], flowerColors: [], stemCounts: [], wrappings: [], wrappingColors: [], ribbons: [], addons: [], cards: [], occasions: [], settings: {} }
+
+function optionList(value: unknown): BouquetOptionRecord[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+  return Object.entries(value).flatMap(([id, raw]) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
+    const item = raw as Record<string, unknown>
+    if (item.enabled === false || typeof item.label !== 'string' || !Number.isInteger(item.price) || Number(item.price) < 0) return []
+    return [{ id, label: item.label, labelEn: typeof item.labelEn === 'string' ? item.labelEn : undefined, price: Number(item.price), image: typeof item.image === 'string' ? item.image : undefined, enabled: true, order: Number.isInteger(item.order) ? Number(item.order) : 0 }]
+  }).sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+function addonList(value: unknown): GiftAddonRecord[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+  return Object.entries(value).flatMap(([id, raw]) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
+    const item = raw as Record<string, unknown>
+    if (item.enabled === false || typeof item.name !== 'string' || !Number.isInteger(item.price) || Number(item.price) < 0) return []
+    return [{ id, name: item.name, nameEn: typeof item.nameEn === 'string' ? item.nameEn : undefined, category: typeof item.category === 'string' ? item.category : undefined, price: Number(item.price), image: typeof item.image === 'string' ? item.image : undefined, stock: Number.isInteger(item.stock) ? Number(item.stock) : undefined, enabled: true, bouquetCompatible: item.bouquetCompatible !== false, order: Number.isInteger(item.order) ? Number(item.order) : 0 }]
+  }).sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+function cardList(value: unknown): GreetingCardTemplateRecord[] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+  return Object.entries(value).flatMap(([id, raw]) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
+    const item = raw as Record<string, unknown>
+    if (item.enabled === false || typeof item.text !== 'string' || item.text.length > 500 || !Number.isInteger(item.price) || Number(item.price) < 0) return []
+    return [{ id, occasion: typeof item.occasion === 'string' ? item.occasion : undefined, text: item.text, price: Number(item.price), enabled: true, order: Number.isInteger(item.order) ? Number(item.order) : 0 }]
+  }).sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+export function subscribeToShopGiftConfig(shopId: string, onConfig: (config: GiftConfig) => void, onError: (error: Error) => void): Unsubscribe {
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(shopId)) throw new Error('Invalid shop ID')
+  return onValue(ref(firebaseDatabase, `shops/${shopId}/public/gifting`), snapshot => {
+    const value = snapshot.val() && typeof snapshot.val() === 'object' && !Array.isArray(snapshot.val()) ? snapshot.val() as Record<string, unknown> : {}
+    onConfig({ flowerTypes: optionList(value.flowerTypes), flowerColors: optionList(value.flowerColors), stemCounts: optionList(value.stemCounts), wrappings: optionList(value.wrappings), wrappingColors: optionList(value.wrappingColors), ribbons: optionList(value.ribbons), addons: addonList(value.addons), cards: cardList(value.cards), occasions: optionList(value.occasions), settings: value.settings && typeof value.settings === 'object' && !Array.isArray(value.settings) ? value.settings as Record<string, unknown> : {} })
+  }, onError)
 }
 
 /**
@@ -222,7 +277,14 @@ export function subscribeToShopPublicConfig(
         const normalizedAreas: Record<string, DeliveryAreaRecord> = {}
         for (const [district, area] of Object.entries(areas)) {
           const areaRecord = area as Record<string, unknown>
-          if (Number.isInteger(areaRecord.price) && (areaRecord.price as number) >= 0 && areaRecord.enabled !== false) normalizedAreas[district] = { price: areaRecord.price as number, ...(typeof areaRecord.deliveryAt === 'string' ? { deliveryAt: areaRecord.deliveryAt } : {}) }
+          if (Number.isInteger(areaRecord.price) && (areaRecord.price as number) >= 0 && areaRecord.enabled !== false) normalizedAreas[district] = {
+            price: areaRecord.price as number,
+            ...(typeof areaRecord.deliveryAt === 'string' ? { deliveryAt: areaRecord.deliveryAt } : {}),
+            ...(Array.isArray(areaRecord.availableDays) ? { availableDays: areaRecord.availableDays.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6) } : {}),
+            ...(Array.isArray(areaRecord.timeSlots) ? { timeSlots: areaRecord.timeSlots.filter((slot): slot is string => typeof slot === 'string' && slot.length <= 80) } : {}),
+            ...(Number.isInteger(areaRecord.preparationHours) && (areaRecord.preparationHours as number) >= 0 ? { preparationHours: areaRecord.preparationHours as number } : {}),
+            ...(Array.isArray(areaRecord.preorderDates) ? { preorderDates: areaRecord.preorderDates.filter((date): date is string => typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) } : {}),
+          }
         }
         delivery[province] = { enabled: record.enabled !== false, areas: normalizedAreas }
       }
