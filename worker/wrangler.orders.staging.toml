@@ -1,0 +1,23 @@
+# Staging-only configuration. Order intake remains disabled until live security and E2E approval.
+name = "alasas-floor-orders-staging"
+main = "src/order-worker-entry.js"
+compatibility_date = "2026-10-14"
+
+[vars]
+ORDERS_ENABLED = "false"
+# Replace only with an approved HTTPS Staging Customer/Admin origin before deployment.
+ALLOWED_ORIGINS = "https://<approved-staging-origin>"
+FIREBASE_SHOP_ID = "<approved-staging-shop-id>"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "alasas-floor-orders-staging"
+database_id = "c45335a4-be16-4c8d-aded-2a2ce33836f0"
+migrations_dir = "migrations"
+
+# Configure outside Git, only after a separate Firebase Staging project exists:
+# FIREBASE_PROJECT_ID
+# FIREBASE_DATABASE_URL
+# FIREBASE_SERVICE_ACCOUNT_EMAIL
+# FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
+# RATE_LIMITER binding

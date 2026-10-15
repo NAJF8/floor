@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test:staff-emulator": "node scripts/test-staff-emulator.mjs",
     "test:admin-demo-emulator": "node scripts/test-admin-demo-emulator.mjs",
+    "test:demo-realtime-emulator": "node scripts/test-demo-realtime-emulator.mjs",
     "seed:admin-demo-emulator": "node scripts/seed-admin-demo-emulator.mjs",
     "provision:super-admins": "node scripts/provision-super-admins.mjs",
     "seed:default-catalog": "node scripts/seed-default-catalog.mjs"
@@ -36,5 +37,18 @@
     "tailwindcss": "^3.4.16",
     "typescript": "^5.6.3",
     "vite": "^5.4.10"
-  }
+  },
+  "description": "",
+  "main": "postcss.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NAJF8/floor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NAJF8/floor/issues"
+  },
+  "homepage": "https://github.com/NAJF8/floor#readme"
 }

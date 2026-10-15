@@ -1,0 +1,15 @@
+# Local-only D1 test configuration. This file has no production database ID.
+name = "alasas-floor-orders-local"
+main = "src/order-worker-entry.js"
+compatibility_date = "2026-10-14"
+
+[vars]
+ORDERS_ENABLED = "false"
+ALLOWED_ORIGINS = "http://localhost:5173"
+FIREBASE_SHOP_ID = "floor-232bc"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "alasas-floor-orders-local"
+database_id = "local-only"
+migrations_dir = "migrations"
