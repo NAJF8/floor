@@ -68,8 +68,22 @@ test('gifting backend fails closed when production rate limiter is required but 
   assert.equal((await response.json()).error, 'RATE_LIMITER_NOT_CONFIGURED')
 })
 
+test('gifting backend enforces the Cloudflare rate limiter binding result', async () => {
+  const base = { verifyToken: async () => identity, adapter: { async read() { return { active: true, role: 'MANAGER' } }, async write() { throw new Error('must not write') } } }
+  const denied = await handleGiftingRequest(request({ operation: 'create', path: 'shops/floor-232bc/public/gifting/addons', value: { name: 'x' } }), { ...env, RATE_LIMITER: { async limit() { return { success: false } } } }, base)
+  assert.equal(denied.status, 429)
+  const unavailable = await handleGiftingRequest(request({ operation: 'create', path: 'shops/floor-232bc/public/gifting/addons', value: { name: 'x' } }), { ...env, RATE_LIMITER: { async limit() { throw new Error('binding unavailable') } } }, base)
+  assert.equal(unavailable.status, 503)
+})
+
 test('gifting backend enforces the body limit without trusting Content-Length', async () => {
   const response = await handleGiftingRequest(request({ operation: 'create', path: 'shops/floor-232bc/public/gifting/addons', value: { name: 'x'.repeat(32 * 1024) } }), env, { verifyToken: async () => identity, adapter: { async read() { return { active: true, role: 'MANAGER' } }, async write() { throw new Error('must not write') } } })
   assert.equal(response.status, 413)
   assert.equal((await response.json()).error, 'BODY_TOO_LARGE')
+})
+
+test('gifting backend reports missing Firebase server credentials as unavailable', async () => {
+  const response = await handleGiftingRequest(request({ operation: 'create', path: 'shops/floor-232bc/public/gifting/addons', value: { name: 'x' } }), env, { verifyToken: async () => identity })
+  assert.equal(response.status, 503)
+  assert.equal((await response.json()).error, 'SERVICE_ACCOUNT_NOT_CONFIGURED')
 })

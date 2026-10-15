@@ -134,7 +134,8 @@ export async function handleGiftingRequest(request, env, dependencies = {}) {
     return json({ ok: true, operation, path: target, key: parsed.id, readback }, 200, origin)
   } catch (error) {
     const code = error?.message || 'GIFTING_BACKEND_ERROR'
-    return json({ error: code }, Number(error?.status) || (code === 'UNAUTHENTICATED' || code === 'AUTH_TOKEN_INVALID' ? 401 : 400), origin)
+    const status = Number(error?.status) || (code === 'UNAUTHENTICATED' || code === 'AUTH_TOKEN_INVALID' ? 401 : ['SERVICE_ACCOUNT_NOT_CONFIGURED', 'TOKEN_EXCHANGE_FAILED', 'TOKEN_RESPONSE_INVALID', 'AUTH_KEYS_UNAVAILABLE', 'RTDB_NOT_CONFIGURED', 'RTDB_TIMEOUT', 'RTDB_UNAVAILABLE', 'RATE_LIMITER_UNAVAILABLE'].includes(code) ? 503 : 400)
+    return json({ error: code }, status, origin)
   }
 }
 
