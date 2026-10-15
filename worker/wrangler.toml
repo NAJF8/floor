@@ -10,6 +10,20 @@ GITHUB_REPO = "floor"
 GITHUB_BRANCH = "main"
 PUBLIC_BASE_URL = "https://najf8.github.io/floor"
 ALLOWED_ORIGINS = "https://najf8.github.io,http://localhost:5173,http://127.0.0.1:5173"
+# Gifting remains fail-closed until a Cloudflare Rate Limiting binding is provisioned.
+GIFTING_RATE_LIMITER_REQUIRED = "true"
 
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "74015"
+
+[ratelimits.simple]
+limit = 60
+period = 60
+
+# Required before enabling gifting writes; configure out-of-band with no values in Git:
+# npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_EMAIL
+# npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY
+# Configure a Cloudflare Rate Limiting binding named RATE_LIMITER before changing the fail-closed gate.
 # Set with: npx wrangler secret put GITHUB_TOKEN
 # Never put the token in this file or in the frontend.

@@ -53,6 +53,11 @@ for (const user of verifiedUsers) updates[`shopMemberships/${user.uid}/${SHOP_ID
   uid: user.uid, email: user.email, role: 'SUPER_ADMIN', active: true, immutableBootstrap: true,
   permissions, createdAt: now, updatedAt: now, provisionedBy: 'trusted-initial-super-admin-process',
 }
+for (const user of verifiedUsers) updates[`admins/${user.uid}`] = {
+  uid: user.uid, shopId: SHOP_ID, role: 'SUPER_ADMIN', active: true, immutableBootstrap: true,
+  permissions: { gifting: true, giftingEdit: true, giftingPublish: true }, createdAt: now, updatedAt: now,
+  provisionedBy: 'trusted-initial-super-admin-process',
+}
 updates[`shops/${SHOP_ID}/private/activityLogs/${auditId}`] = {
   action: 'INITIAL_SUPER_ADMIN_PROVISIONED', actor: 'trusted-initial-super-admin-process',
   targetUids: verifiedUsers.map((user) => user.uid), targetEmails: verifiedUsers.map((user) => user.email), createdAt: now,

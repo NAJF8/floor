@@ -9,6 +9,7 @@ const projectId = 'floor-232bc'
 const shopId = projectId
 const databaseHost = process.env.FIREBASE_DATABASE_EMULATOR_HOST || '127.0.0.1:9000'
 const [databaseAddress, databasePort] = databaseHost.split(':')
+const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'
 const databaseUrl = `http://${databaseHost}?ns=${projectId}-default-rtdb`
 const runId = Date.now().toString(36)
 const adminApp = getAdminApps()[0] || initializeAdminApp({ projectId, databaseURL: databaseUrl })
@@ -23,7 +24,7 @@ const roles = {
 
 async function createIdentity(label) {
   const email = `${label}-${runId}@emulator.invalid`
-  const response = await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'StrongPass123!', returnSecureToken: true }) })
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'StrongPass123!', returnSecureToken: true }) })
   const body = await response.json()
   if (!response.ok || !body.localId) throw new Error(`Auth Emulator signup failed (${response.status})`)
   return { uid: body.localId, email }
@@ -33,7 +34,7 @@ async function clientFor(identity) {
   const app = initializeApp({ apiKey: 'local', authDomain: 'localhost', databaseURL: databaseUrl, projectId }, `rules-${identity?.uid || 'anonymous'}-${Math.random()}`)
   const auth = getAuth(app)
   const db = getDatabase(app)
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+  connectAuthEmulator(auth, `http://${authHost}`, { disableWarnings: true })
   connectDatabaseEmulator(db, databaseAddress, Number(databasePort))
   if (identity) await signInWithEmailAndPassword(auth, identity.email, 'StrongPass123!')
   return { app, auth, db }
