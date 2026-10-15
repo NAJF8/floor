@@ -1,0 +1,30 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "shops": {
+      "$shopId": {
+        "products": { ".read": true, ".indexOn": ["status"] },
+        "public": {
+          "fixture": {
+            ".read": true,
+            ".write": true
+          },
+          "demoProducts": { ".read": true, ".write": true },
+          "categories": { ".read": true, ".indexOn": ["status", "visible"] },
+          "delivery": { ".read": true },
+          "paymentMethods": { ".read": true },
+          "homepage": { ".read": true, ".write": true },
+          "aiAssistant": { ".read": true, ".write": true },
+          "settings": { ".read": true, ".write": true }
+        },
+        "private": {
+          "orders": {
+            ".read": false,
+            ".write": false
+          }
+        }
+      }
+    }
+  }
+}

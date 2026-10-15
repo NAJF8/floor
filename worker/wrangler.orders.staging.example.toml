@@ -1,0 +1,26 @@
+# TEMPLATE ONLY. Do not run until a separate staging approval supplies a real D1 id.
+name = "alasas-floor-orders-staging"
+main = "src/order-worker-entry.js"
+compatibility_date = "2026-10-14"
+
+[env.staging]
+name = "alasas-floor-orders-staging"
+
+[env.staging.vars]
+# Keep order intake disabled until smoke tests and approval complete.
+ORDERS_ENABLED = "false"
+ALLOWED_ORIGINS = "https://<approved-staging-customer-origin>"
+FIREBASE_SHOP_ID = "floor-232bc"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "<approved-staging-d1-name>"
+database_id = "<approved-staging-d1-id>"
+migrations_dir = "migrations"
+
+# Required binding/secret names, configured separately and never committed:
+# RATE_LIMITER binding
+# FIREBASE_PROJECT_ID secret/var
+# FIREBASE_DATABASE_URL secret/var
+# FIREBASE_SERVICE_ACCOUNT_EMAIL secret
+# FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY secret
