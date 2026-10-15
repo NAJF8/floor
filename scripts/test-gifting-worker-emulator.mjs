@@ -36,8 +36,12 @@ try {
   assert.equal((await call(`${runId}-admin`, { active: true, role: 'ADMIN', permissions: { catalog: true } }, { operation: 'update', path, value: { price: 1200 } })).status, 200)
   assert.equal((await call(`${runId}-super`, { active: true, role: 'SUPER_ADMIN' }, { operation: 'publish', path })).status, 200)
   assert.equal((await call(`${runId}-super`, { active: true, role: 'SUPER_ADMIN' }, { operation: 'hide', path })).status, 200)
+  assert.equal((await call(`${runId}-super`, { active: true, role: 'SUPER_ADMIN' }, { operation: 'publish', path })).status, 200)
+  assert.equal((await adminDb.ref(path.replace('/admin/gifting/', '/public/gifting/')).get()).val().status, 'PUBLISHED')
+  assert.equal((await call(`${runId}-super`, { active: true, role: 'SUPER_ADMIN' }, { operation: 'archive', path })).status, 200)
   const readback = (await adminDb.ref(draftPath).get()).val()
-  assert.deepEqual(readback, { name: 'Synthetic ribbon', price: 1200, enabled: false, status: 'HIDDEN' })
+  assert.deepEqual(readback, { name: 'Synthetic ribbon', price: 1200, enabled: false, status: 'ARCHIVED' })
+  assert.equal((await adminDb.ref(path.replace('/admin/gifting/', '/public/gifting/')).get()).exists(), false)
   let live = false
   const stop = onValue(ref(anonymousDb, `shops/${shopId}/public/gifting`), snapshot => { if (!snapshot.child(`addons/${key}`).exists()) live = true })
   await new Promise(resolve => setTimeout(resolve, 400))
@@ -45,7 +49,7 @@ try {
   let directDenied = false
   try { await set(ref(anonymousDb, path), { name: 'bypass', price: 1 }) } catch { directDenied = true }
   assert.equal(directDenied, true)
-  console.log(JSON.stringify({ ANONYMOUS_REJECTION: 'PASS', EMPLOYEE_REJECTION: 'PASS', MANAGER_CREATE: 'PASS', ADMIN_UPDATE: 'PASS', SUPER_ADMIN_PUBLISH_HIDE: 'PASS', FIREBASE_READBACK: 'PASS', CUSTOMER_REALTIME: 'PASS', DIRECT_WRITE_DENIED: 'PASS' }))
+  console.log(JSON.stringify({ ANONYMOUS_REJECTION: 'PASS', EMPLOYEE_REJECTION: 'PASS', MANAGER_CREATE: 'PASS', ADMIN_UPDATE: 'PASS', SUPER_ADMIN_PUBLISH_HIDE_REPUBLISH_ARCHIVE: 'PASS', FIREBASE_READBACK: 'PASS', CUSTOMER_REALTIME: 'PASS', DIRECT_WRITE_DENIED: 'PASS' }))
 } finally {
   await adminDb.ref(`shops/${shopId}/public/gifting`).remove()
   await deleteApp(anonymousApp)
