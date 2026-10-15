@@ -31,6 +31,7 @@ if (existing.some((snapshot) => snapshot.exists())) throw new Error('Existing me
 const now = new Date().toISOString()
 const permissions = Object.fromEntries(['manageProducts','manageCategories','manageImages','manageOrders','managePricing','manageDiscounts','manageInventory','manageStoreSettings','manageWhatsApp','manageEmployees','manageReports','manageActivityLogs','manageAiAssistant','manageAdministrators'].map((key) => [key, true]))
 const updates = {}; users.forEach((user) => { updates[`shopMemberships/${user.uid}/${SHOP_ID}`] = { uid: user.uid, email: user.email, role: 'SUPER_ADMIN', active: true, immutableBootstrap: true, permissions, provisionedAt: now, provisionedBy: 'trusted-provisioning-script' } })
+users.forEach((user) => { updates[`admins/${user.uid}`] = { uid: user.uid, shopId: SHOP_ID, email: user.email, role: 'SUPER_ADMIN', active: true, immutableBootstrap: true, permissions: { gifting: true, giftingEdit: true, giftingPublish: true }, provisionedAt: now, provisionedBy: 'trusted-provisioning-script' } })
 updates[`shops/${SHOP_ID}/private/activityLogs/${Date.now()}`] = { action: 'INITIAL_SUPER_ADMIN_PROVISION', actor: 'trusted-provisioning-script', uids: users.map((user) => user.uid), createdAt: now }
 console.log(JSON.stringify({ project: PROJECT_ID, shop: SHOP_ID, commit, users: users.map((user) => ({ uid: user.uid, email: user.email, emailVerified: user.emailVerified })) }, null, 2))
 if (commit) await db.ref().update(updates)

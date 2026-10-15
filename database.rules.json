@@ -11,6 +11,13 @@
         }
       }
     },
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": false,
+        ".validate": "newData.hasChildren(['shopId', 'role', 'active']) && newData.child('shopId').isString() && newData.child('role').isString() && newData.child('active').isBoolean() && (newData.child('role').val() == 'SUPER_ADMIN' || newData.child('role').val() == 'ADMIN' || newData.child('role').val() == 'MANAGER' || newData.child('role').val() == 'EMPLOYEE')"
+      }
+    },
     "shops": {
       "$shopId": {
         "products": {
@@ -31,6 +38,20 @@
             ".read": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('inventory').val() != false)",
             ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('inventory').val() != false)",
             "$id": { ".validate": "(!newData.hasChild('name') || (newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 200)) && (!newData.hasChild('quantity') || (newData.child('quantity').isNumber() && newData.child('quantity').val() >= 0)) && (!newData.hasChild('reorderLevel') || (newData.child('reorderLevel').isNumber() && newData.child('reorderLevel').val() >= 0)) && (!newData.hasChild('costPrice') || (newData.child('costPrice').isNumber() && newData.child('costPrice').val() >= 0)) && (!newData.hasChild('active') || newData.child('active').isBoolean()) && (!newData.hasChild('status') || newData.child('status').val() == 'ACTIVE' || newData.child('status').val() == 'ARCHIVED')" }
+          }
+        },
+        "admin": {
+          "gifting": {
+            ".read": "auth != null && root.child('admins').child(auth.uid).child('shopId').val() == $shopId && root.child('admins').child(auth.uid).child('active').val() == true",
+            ".write": "auth != null && root.child('admins').child(auth.uid).child('shopId').val() == $shopId && root.child('admins').child(auth.uid).child('active').val() == true && (root.child('admins').child(auth.uid).child('role').val() == 'SUPER_ADMIN' || root.child('admins').child(auth.uid).child('role').val() == 'ADMIN' || (root.child('admins').child(auth.uid).child('role').val() == 'MANAGER' && root.child('admins').child(auth.uid).child('permissions').child('gifting').val() != false) || (root.child('admins').child(auth.uid).child('role').val() == 'EMPLOYEE' && root.child('admins').child(auth.uid).child('permissions').child('giftingEdit').val() == true))",
+            "$collection": {
+              "$id": {
+                ".validate": "newData.hasChildren() && !newData.hasChild('recipient') && !newData.hasChild('recipientName') && !newData.hasChild('customer') && !newData.hasChild('customerId') && !newData.hasChild('customerName') && !newData.hasChild('phone') && !newData.hasChild('address') && !newData.hasChild('email') && !newData.hasChild('orderId') && !newData.hasChild('paymentToken') && (!newData.hasChild('price') || (newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 1000000000)) && (!newData.hasChild('stock') || (newData.child('stock').isNumber() && newData.child('stock').val() >= 0)) && (!newData.hasChild('order') || (newData.child('order').isNumber() && newData.child('order').val() >= 0)) && (!newData.hasChild('enabled') || newData.child('enabled').isBoolean()) && (!newData.hasChild('status') || (newData.child('status').isString() && (newData.child('status').val() == 'DRAFT' || newData.child('status').val() == 'PUBLISHED' || newData.child('status').val() == 'HIDDEN' || newData.child('status').val() == 'ARCHIVED'))) && (!newData.hasChild('name') || (newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 160)) && (!newData.hasChild('label') || (newData.child('label').isString() && newData.child('label').val().length > 0 && newData.child('label').val().length <= 160)) && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 500))"
+              }
+            },
+            "settings": {
+              ".validate": "newData.hasChildren() && !newData.hasChild('recipient') && !newData.hasChild('customerId') && (!newData.hasChild('maxCardMessageLength') || (newData.child('maxCardMessageLength').isNumber() && newData.child('maxCardMessageLength').val() >= 1 && newData.child('maxCardMessageLength').val() <= 2000)) && (!newData.hasChild('preparationHours') || (newData.child('preparationHours').isNumber() && newData.child('preparationHours').val() >= 0 && newData.child('preparationHours').val() <= 720))"
+            }
           }
         },
         "public": {
@@ -68,11 +89,17 @@
           "aiAssistant": { ".read": true, ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'VIEWER' && root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() != 'EMPLOYEE' && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('catalog').val() != false)" },
           "settings": { ".read": true, ".write": "auth != null && root.child('shopMemberships').child(auth.uid).child($shopId).child('active').val() == true && (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'SUPER_ADMIN' || (root.child('shopMemberships').child(auth.uid).child($shopId).child('role').val() == 'ADMIN' && root.child('shopMemberships').child(auth.uid).child($shopId).child('permissions').child('settings').val() != false))" },
           "gifting": {
+            ".indexOn": ["status", "enabled"],
             ".read": true,
-            ".write": false,
-            "addons": { "$id": { ".validate": "newData.hasChildren(['name', 'price']) && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 160 && newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 1000000000 && (!newData.hasChild('enabled') || newData.child('enabled').isBoolean()) && (!newData.hasChild('stock') || (newData.child('stock').isNumber() && newData.child('stock').val() >= 0))" } },
-            "$optionGroup": { "$id": { ".validate": "(!newData.hasChild('label') || (newData.child('label').isString() && newData.child('label').val().length > 0 && newData.child('label').val().length <= 120)) && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 500)) && (!newData.hasChild('price') || (newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 1000000000)) && (!newData.hasChild('enabled') || newData.child('enabled').isBoolean())" } },
-            "settings": { ".validate": "newData.hasChildren() && (!newData.hasChild('maxCardMessageLength') || (newData.child('maxCardMessageLength').isNumber() && newData.child('maxCardMessageLength').val() >= 1 && newData.child('maxCardMessageLength').val() <= 2000))" }
+            ".write": "auth != null && root.child('admins').child(auth.uid).child('shopId').val() == $shopId && root.child('admins').child(auth.uid).child('active').val() == true && (root.child('admins').child(auth.uid).child('role').val() == 'SUPER_ADMIN' || root.child('admins').child(auth.uid).child('role').val() == 'ADMIN' || (root.child('admins').child(auth.uid).child('role').val() == 'MANAGER' && root.child('admins').child(auth.uid).child('permissions').child('gifting').val() != false) || (root.child('admins').child(auth.uid).child('role').val() == 'EMPLOYEE' && root.child('admins').child(auth.uid).child('permissions').child('giftingPublish').val() == true))",
+            "$collection": {
+              "$id": {
+                ".validate": "newData.hasChildren(['status', 'enabled']) && newData.child('status').val() == 'PUBLISHED' && newData.child('enabled').val() == true && !newData.hasChild('recipient') && !newData.hasChild('recipientName') && !newData.hasChild('customer') && !newData.hasChild('customerId') && !newData.hasChild('customerName') && !newData.hasChild('phone') && !newData.hasChild('address') && !newData.hasChild('email') && !newData.hasChild('orderId') && !newData.hasChild('paymentToken') && (!newData.hasChild('price') || (newData.child('price').isNumber() && newData.child('price').val() >= 0 && newData.child('price').val() <= 1000000000)) && (!newData.hasChild('stock') || (newData.child('stock').isNumber() && newData.child('stock').val() >= 0)) && (!newData.hasChild('order') || (newData.child('order').isNumber() && newData.child('order').val() >= 0)) && (!newData.hasChild('name') || (newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 160)) && (!newData.hasChild('label') || (newData.child('label').isString() && newData.child('label').val().length > 0 && newData.child('label').val().length <= 160)) && (!newData.hasChild('text') || (newData.child('text').isString() && newData.child('text').val().length <= 500))"
+              }
+            },
+            "settings": {
+              ".validate": "newData.hasChildren() && !newData.hasChild('recipient') && !newData.hasChild('customerId') && (!newData.hasChild('maxCardMessageLength') || (newData.child('maxCardMessageLength').isNumber() && newData.child('maxCardMessageLength').val() >= 1 && newData.child('maxCardMessageLength').val() <= 2000)) && (!newData.hasChild('preparationHours') || (newData.child('preparationHours').isNumber() && newData.child('preparationHours').val() >= 0 && newData.child('preparationHours').val() <= 720))"
+            }
           }
         }
       }
