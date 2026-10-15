@@ -74,25 +74,30 @@ async function checkRate(uid, env) {
 }
 
 async function membershipFor(uid, adapter) {
-  return adapter.read(`shopMemberships/${uid}/${SHOP_ID}`)
+  const current = await adapter.read(`admins/${uid}`)
+  if (current && typeof current === 'object' && current.active === true && (current.shopId === SHOP_ID || !current.shopId)) return { ...current, shopId: current.shopId || SHOP_ID }
+  const legacy = await adapter.read(`shopMemberships/${uid}/${SHOP_ID}`)
+  return legacy && typeof legacy === 'object' ? { ...legacy, shopId: legacy.shopId || SHOP_ID } : legacy
 }
 
 function authorized(membership) {
   const role = String(membership?.role || '')
-  return membership?.active === true && (ROLE_ORDER[role] ?? -1) >= ROLE_ORDER.MANAGER && (role === 'SUPER_ADMIN' || membership?.permissions?.catalog !== false)
+  return membership?.shopId === SHOP_ID && membership?.active === true && (ROLE_ORDER[role] ?? -1) >= ROLE_ORDER.MANAGER && (role === 'SUPER_ADMIN' || role === 'ADMIN' || (role === 'MANAGER' && membership?.permissions?.gifting !== false && membership?.permissions?.catalog !== false))
 }
 
 function pathParts(path, operation) {
   if (typeof path !== 'string' || path.includes('..') || path.includes('//')) fail('INVALID_PATH')
-  const prefix = `shops/${SHOP_ID}/public/gifting`
-  if (!path.startsWith(`${prefix}/`) && path !== prefix) fail('INVALID_PATH')
-  const parts = path.slice(prefix.length).replace(/^\//, '').split('/').filter(Boolean)
+  const draftPrefix = `shops/${SHOP_ID}/admin/gifting`
+  const publicPrefix = `shops/${SHOP_ID}/public/gifting`
+  const inputPrefix = path.startsWith(`${draftPrefix}/`) || path === draftPrefix ? draftPrefix : publicPrefix
+  if (!path.startsWith(`${inputPrefix}/`) && path !== inputPrefix) fail('INVALID_PATH')
+  const parts = path.slice(inputPrefix.length).replace(/^\//, '').split('/').filter(Boolean)
   if (parts[0] === 'settings') {
     if (parts.length !== 1 || !['update'].includes(operation)) fail('INVALID_PATH')
-    return { collection: 'settings', id: null, target: prefix + '/settings' }
+    return { collection: 'settings', id: null, target: draftPrefix + '/settings', prefix: draftPrefix }
   }
   if (!COLLECTIONS.has(parts[0]) || (operation === 'create' && parts.length !== 1) || (operation !== 'create' && parts.length !== 2)) fail('INVALID_PATH')
-  return { collection: parts[0], id: parts[1] || null, target: `${prefix}/${parts[0]}${parts[1] ? `/${safeId(parts[1], 'id')}` : ''}` }
+  return { collection: parts[0], id: parts[1] || null, target: `${draftPrefix}/${parts[0]}${parts[1] ? `/${safeId(parts[1], 'id')}` : ''}`, prefix: draftPrefix }
 }
 
 export async function handleGiftingRequest(request, env, dependencies = {}) {
@@ -126,9 +131,22 @@ export async function handleGiftingRequest(request, env, dependencies = {}) {
     }
     if (operation === 'create') parsed.id = crypto.randomUUID().replace(/-/g, '').slice(0, 20)
     const target = operation === 'create' ? `${parsed.target}/${parsed.id}` : parsed.target
-    await adapter.write(target, value)
-    const readback = await adapter.read(target)
-    if (!readback || typeof readback !== 'object') fail('READBACK_FAILED', 502)
+    let readback
+    if (['publish', 'hide'].includes(operation)) {
+      if (parsed.prefix !== `shops/${SHOP_ID}/admin/gifting`) fail('INVALID_PATH')
+      const publicTarget = target.replace(`/admin/gifting/`, `/public/gifting/`)
+      const publicValue = operation === 'publish' ? { ...value, enabled: true, status: 'PUBLISHED' } : null
+      const draftValue = operation === 'publish' ? publicValue : { ...value, enabled: false, status: 'HIDDEN' }
+      if (typeof adapter.writeMany !== 'function') fail('ATOMIC_WRITE_UNAVAILABLE', 503)
+      await adapter.writeMany({ [target]: draftValue, [publicTarget]: publicValue })
+      readback = await adapter.read(publicTarget)
+      if (operation === 'publish' && (!readback || readback.status !== 'PUBLISHED' || readback.enabled !== true)) fail('READBACK_FAILED', 502)
+      if (operation === 'hide' && readback !== null) fail('READBACK_FAILED', 502)
+    } else {
+      await adapter.write(target, value)
+      readback = await adapter.read(target)
+    }
+    if (operation !== 'hide' && (!readback || typeof readback !== 'object')) fail('READBACK_FAILED', 502)
     const auditId = crypto.randomUUID().replace(/-/g, '')
     await adapter.write(`shops/${SHOP_ID}/private/activityLogs/${auditId}`, { action: `GIFTING_${operation.toUpperCase()}`, actorUid: identity.uid, role: membership.role, path: target, createdAt: Date.now() })
     return json({ ok: true, operation, path: target, key: parsed.id, readback }, 200, origin)

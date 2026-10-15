@@ -59,37 +59,16 @@ await denied('customer public write denied', () => set(ref(customerClient.db, `$
 await denied('customer draft write denied', () => set(ref(customerClient.db, `${draftPath}/customer`), { name: 'Nope', price: 1, enabled: false, status: 'DRAFT' }))
 await allowed('employee can read admin draft', () => get(ref(employeeClient.db, draftPath)))
 await denied('employee unauthorized write denied', () => set(ref(employeeClient.db, `${draftPath}/employee`), { name: 'Nope', price: 1, enabled: false, status: 'DRAFT' }))
-await allowed('manager creates draft', () => set(ref(managerClient.db, `${draftPath}/ribbon-1`), { name: 'Manager ribbon', price: 2500, enabled: false, status: 'DRAFT', order: 1 }))
-await denied('invalid pricing denied', () => update(ref(managerClient.db, `${draftPath}/ribbon-1`), { price: -1 }))
-await denied('sensitive field injection denied', () => update(ref(managerClient.db, `${draftPath}/ribbon-1`), { customerId: 'customer-secret' }))
-await allowed('manager publishes draft atomically', () => update(ref(managerClient.db), {
-  [`${draftPath}/ribbon-1`]: { name: 'Manager ribbon', price: 2500, enabled: true, status: 'PUBLISHED', order: 1 },
-  [`${publicPath}/addons/ribbon-1`]: { name: 'Manager ribbon', price: 2500, enabled: true, status: 'PUBLISHED', order: 1 },
-}))
-assert.equal((await get(ref(customerClient.db, `${publicPath}/addons/ribbon-1`))).val().price, 2500)
-await allowed('manager creates and publishes greeting card', () => update(ref(managerClient.db), {
-  [`${draftPath.replace('/addons', '/cards')}/card-1`]: { text: 'كل عام وأنت بخير', occasion: 'birthday', price: 1500, enabled: true, status: 'PUBLISHED', order: 1 },
-  [`${publicPath}/cards/card-1`]: { text: 'كل عام وأنت بخير', occasion: 'birthday', price: 1500, enabled: true, status: 'PUBLISHED', order: 1 },
-}))
-await allowed('manager creates and publishes bouquet option', () => update(ref(managerClient.db), {
-  [`${draftPath.replace('/addons', '/flowerTypes')}/rose-1`]: { label: 'ورد جوري', price: 30000, enabled: true, status: 'PUBLISHED', order: 1 },
-  [`${publicPath}/flowerTypes/rose-1`]: { label: 'ورد جوري', price: 30000, enabled: true, status: 'PUBLISHED', order: 1 },
-}))
-assert.equal((await get(ref(customerClient.db, `${publicPath}/cards/card-1`))).val().text, 'كل عام وأنت بخير')
-assert.equal((await get(ref(customerClient.db, `${publicPath}/flowerTypes/rose-1`))).val().price, 30000)
+await denied('manager direct draft write denied', () => set(ref(managerClient.db, `${draftPath}/ribbon-1`), { name: 'Manager ribbon', price: 2500, enabled: false, status: 'DRAFT', order: 1 }))
+await denied('manager direct public write denied', () => set(ref(managerClient.db, `${publicPath}/addons/ribbon-1`), { name: 'Manager ribbon', price: 2500, enabled: true, status: 'PUBLISHED', order: 1 }))
+await denied('invalid pricing direct write denied', () => update(ref(managerClient.db), { [`${draftPath}/ribbon-1`]: { name: 'bad', price: -1 }, [`${publicPath}/addons/ribbon-1`]: { name: 'bad', price: -1 } }))
+await denied('sensitive field direct write denied', () => update(ref(managerClient.db), { [`${draftPath}/ribbon-1/customerId`]: 'customer-secret', [`${publicPath}/addons/ribbon-1/customerId`]: 'customer-secret' }))
+await denied('super admin direct publish denied', () => set(ref(superClient.db, `${publicPath}/addons/direct-publish`), { name: 'No direct publish', price: 1, enabled: true, status: 'PUBLISHED' }))
 await denied('unauthorized publish denied', () => update(ref(outsiderClient.db), { [`${publicPath}/addons/bad`]: { name: 'bad', price: 1, enabled: true, status: 'PUBLISHED' } }))
-await allowed('super admin write', () => set(ref(superClient.db, `${draftPath}/super-1`), { name: 'Super ribbon', price: 5000, enabled: false, status: 'DRAFT' }))
+await denied('super admin direct draft write denied', () => set(ref(superClient.db, `${draftPath}/super-1`), { name: 'Super ribbon', price: 5000, enabled: false, status: 'DRAFT' }))
 await denied('admin self promotion denied', () => set(ref(managerClient.db, `admins/${manager.uid}/role`), 'SUPER_ADMIN'))
 await denied('role escalation denied', () => set(ref(managerClient.db, `admins/${outsider.uid}`), { shopId, role: 'SUPER_ADMIN', active: true }))
 await denied('invalid public payload denied', () => set(ref(managerClient.db, `${publicPath}/addons/injected`), { name: 'bad', price: -1, enabled: true, status: 'PUBLISHED' }))
 
-let realtime = false
-const stop = onValue(ref(customerClient.db, `${publicPath}/addons/ribbon-1`), snapshot => { if (snapshot.child('price').val() === 2600) realtime = true })
-await allowed('manager update readback', () => update(ref(managerClient.db), { [`${draftPath}/ribbon-1/price`]: 2600, [`${publicPath}/addons/ribbon-1/price`]: 2600 }))
-await new Promise(resolve => setTimeout(resolve, 250))
-stop(); assert.equal(realtime, true, 'customer onValue did not receive update')
-await allowed('manager hides projection', () => update(ref(managerClient.db), { [`${draftPath}/ribbon-1/enabled`]: false, [`${draftPath}/ribbon-1/status`]: 'HIDDEN', [`${publicPath}/addons/ribbon-1`]: null }))
-assert.equal((await get(ref(customerClient.db, `${publicPath}/addons/ribbon-1`))).exists(), false)
-
 for (const client of [anonymous, managerClient, superClient, employeeClient, customerClient, outsiderClient]) await deleteApp(client.app)
-console.log(JSON.stringify({ ADMIN_AUTH: 'PASS', DIRECT_RTDB_CRUD: 'PASS', SECURITY_RULES: 'PASS', RBAC: 'PASS', GIFT_ADDONS: 'PASS', GREETING_CARDS: 'PASS', BOUQUET_OPTIONS: 'PASS', PUBLISH_HIDE: 'PASS', ADMIN_READBACK: 'PASS', CUSTOMER_REALTIME: 'PASS', PRODUCTION_DATA_PRESERVED: 'PASS' }))
+console.log(JSON.stringify({ ADMIN_AUTH: 'PASS', DIRECT_RTDB_WRITES_DENIED: 'PASS', SECURITY_RULES: 'PASS', RBAC: 'PASS', CUSTOMER_PUBLIC_READ: 'PASS', SENSITIVE_FIELDS_DENIED: 'PASS', MULTI_LOCATION_WRITE_DENIED: 'PASS', PRODUCTION_DATA_PRESERVED: 'PASS' }))

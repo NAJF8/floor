@@ -24,7 +24,7 @@ test('gifting backend enforces membership and writes a sanitized record with aud
   const response = await handleGiftingRequest(request({ operation: 'create', path: 'shops/floor-232bc/public/gifting/addons', value: { name: 'Ribbon', price: 5000, privateCustomerData: 'must-drop' } }), env, { verifyToken: async () => identity, adapter })
   assert.equal(response.status, 200)
   assert.equal(writes.length, 2)
-  assert.match(writes[0].path, /^shops\/floor-232bc\/public\/gifting\/addons\/[A-Za-z0-9_-]+$/)
+  assert.match(writes[0].path, /^shops\/floor-232bc\/admin\/gifting\/addons\/[A-Za-z0-9_-]+$/)
   assert.deepEqual(writes[0].value, { name: 'Ribbon', price: 5000 })
   assert.equal(writes[1].value.action, 'GIFTING_CREATE')
 })
@@ -51,15 +51,16 @@ test('gifting backend rejects unverified, non-Google, and customer identities', 
 test('gifting backend supports explicit publish and hide operations with readback', async () => {
   const writes = []
   const adapter = {
-    async read(path) { if (path.startsWith('shopMemberships/')) return { active: true, role: 'SUPER_ADMIN' }; return writes.at(-1)?.value || { enabled: true, status: 'PUBLISHED' } },
+    async read(path) { if (path.startsWith('shopMemberships/') || path.startsWith('admins/')) return { active: true, role: 'SUPER_ADMIN' }; const last = writes.at(-1); return last ? last.value : { enabled: true, status: 'PUBLISHED' } },
     async write(path, value) { writes.push({ path, value }); return value },
+    async writeMany(values) { for (const [path, value] of Object.entries(values)) writes.push({ path, value }); return values },
   }
   const path = 'shops/floor-232bc/public/gifting/cards/card-1'
   const published = await handleGiftingRequest(request({ operation: 'publish', path }), env, { verifyToken: async () => identity, adapter })
   const hidden = await handleGiftingRequest(request({ operation: 'hide', path }), env, { verifyToken: async () => identity, adapter })
   assert.equal(published.status, 200)
   assert.equal(hidden.status, 200)
-  assert.deepEqual(writes.filter(item => item.path === path).map(item => item.value), [{ enabled: true, status: 'PUBLISHED' }, { enabled: false, status: 'HIDDEN' }])
+  assert.deepEqual(writes.filter(item => item.path.endsWith('/admin/gifting/cards/card-1')).map(item => item.value), [{ enabled: true, status: 'PUBLISHED' }, { enabled: false, status: 'HIDDEN' }])
 })
 
 test('gifting backend fails closed when production rate limiter is required but absent', async () => {

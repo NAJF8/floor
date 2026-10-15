@@ -91,6 +91,10 @@ export function createRtdbAdapter({ env, fetchImpl = fetch, getAccessToken = cre
       const response = await request(path, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(value) })
       return response.json()
     },
+    async writeMany(values) {
+      const response = await request('', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(values) })
+      return response.json()
+    },
     async readSnapshot() {
       return this.read(`shops/${env.FIREBASE_SHOP_ID || 'floor-232bc'}`)
     },
