@@ -58,7 +58,14 @@ function sanitizeValue(collection, value, operation) {
   return clean
 }
 
-function checkRate(uid) {
+async function checkRate(uid, env) {
+  if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === 'function') {
+    let result
+    try { result = await env.RATE_LIMITER.limit({ key: `gifting:${uid}` }) } catch { fail('RATE_LIMITER_UNAVAILABLE', 503) }
+    if (!result?.success) fail('RATE_LIMITED', 429)
+    return
+  }
+  if (String(env.GIFTING_RATE_LIMITER_REQUIRED || '').toLowerCase() === 'true') fail('RATE_LIMITER_NOT_CONFIGURED', 503)
   const now = Date.now()
   const current = rateWindow.get(uid)
   if (!current || now - current.startedAt >= 60_000) { rateWindow.set(uid, { startedAt: now, count: 1 }); return }
@@ -93,22 +100,30 @@ export async function handleGiftingRequest(request, env, dependencies = {}) {
   if (!allowed) return json({ error: 'origin_not_allowed' }, 403, origin)
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) })
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, origin)
-  const length = Number(request.headers.get('content-length') || 0)
-  if (length > MAX_BODY_BYTES) return json({ error: 'body_too_large' }, 413, origin)
   try {
     const identity = await (dependencies.verifyToken || verifyFirebaseIdToken)(request, env)
     if (identity.claims?.email_verified === false) fail('EMAIL_NOT_VERIFIED', 403)
     if (identity.claims?.firebase?.sign_in_provider && identity.claims.firebase.sign_in_provider !== 'google.com') fail('GOOGLE_SIGN_IN_REQUIRED', 403)
     if (!env.FIREBASE_DATABASE_URL) fail('RTDB_NOT_CONFIGURED', 503)
     const adapter = dependencies.adapter || createRtdbAdapter({ env })
-    checkRate(identity.uid)
-    const body = await request.json()
+    await checkRate(identity.uid, env)
+    const rawBody = await request.text()
+    if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) fail('BODY_TOO_LARGE', 413)
+    let body
+    try { body = JSON.parse(rawBody) } catch { fail('INVALID_JSON') }
     const operation = body?.operation
-    if (!['create', 'update', 'archive'].includes(operation)) fail('INVALID_OPERATION')
+    if (!['create', 'update', 'publish', 'hide', 'archive'].includes(operation)) fail('INVALID_OPERATION')
     const parsed = pathParts(body?.path, operation)
     const membership = await membershipFor(identity.uid, adapter)
     if (!authorized(membership)) fail('MEMBERSHIP_DENIED', 403)
-    const value = operation === 'archive' ? { enabled: false, status: 'ARCHIVED' } : sanitizeValue(parsed.collection, body.value, operation)
+    const requested = operation === 'archive' ? { enabled: false, status: 'ARCHIVED' } : operation === 'publish' ? { enabled: true, status: 'PUBLISHED' } : operation === 'hide' ? { enabled: false, status: 'HIDDEN' } : body.value
+    let value
+    if (operation === 'create') value = sanitizeValue(parsed.collection, requested, operation)
+    else {
+      const existing = await adapter.read(parsed.target)
+      if (!existing || typeof existing !== 'object' || Array.isArray(existing)) fail('RECORD_NOT_FOUND', 404)
+      value = sanitizeValue(parsed.collection, { ...existing, ...requested }, 'update')
+    }
     if (operation === 'create') parsed.id = crypto.randomUUID().replace(/-/g, '').slice(0, 20)
     const target = operation === 'create' ? `${parsed.target}/${parsed.id}` : parsed.target
     await adapter.write(target, value)
