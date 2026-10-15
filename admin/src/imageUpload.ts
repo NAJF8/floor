@@ -4,7 +4,7 @@ import { auth } from './firebase'
 const endpoint = String(import.meta.env.VITE_IMAGE_UPLOAD_ENDPOINT || '').trim()
 
 export type UploadAssetType = 'logo' | 'favicon' | 'cover' | 'banner' | 'hero-media' | 'hero-poster' | 'ai-avatar' | 'product' | 'category' | 'occasion' | 'product-extra'
-export type UploadResult = { url: string; path: string; commitSha?: string; contentType: string; size: number; publicUrlVerified?: boolean }
+export type UploadResult = { url: string; path: string; commitSha: string; contentType: string; size: number; publicUrlVerified: boolean }
 export type PreparedUpload = { file: File; previewUrl: string; originalName: string; originalType: string; originalSize: number; converted: boolean }
 
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/bmp', 'image/tiff', 'image/heic', 'image/heif', 'image/svg+xml'])
@@ -34,7 +34,7 @@ export function isAllowedPublicAssetUrl(value: string) {
   try {
     const url = new URL(value)
     const allowedPath = url.pathname.includes('/public/uploads/floor-232bc/') || url.pathname.includes('/floor/uploads/floor-232bc/')
-    return url.protocol === 'https:' && allowedPath && (url.hostname === 'raw.githubusercontent.com' || url.hostname.endsWith('.githubusercontent.com') || url.hostname === 'najf8.github.io')
+    return url.protocol === 'https:' && allowedPath && (url.hostname === 'raw.githubusercontent.com' || url.hostname === 'najf8.github.io')
   } catch { return false }
 }
 
@@ -104,8 +104,8 @@ export async function uploadAsset(file: File, assetType: UploadAssetType, record
     throw new Error(errorMessages.NETWORK_ERROR)
   }
   const payload = await response.json().catch(() => ({})) as Partial<UploadResult> & { error?: string }
-  if (!response.ok || typeof payload.url !== 'string') throw new Error(imageUploadErrorMessage(payload.error || ''))
-  if (!isAllowedPublicAssetUrl(payload.url)) throw new Error(errorMessages.PUBLIC_URL_NOT_VERIFIED)
+  if (!response.ok || typeof payload.url !== 'string' || typeof payload.path !== 'string' || typeof payload.commitSha !== 'string') throw new Error(imageUploadErrorMessage(payload.error || ''))
+  if (payload.publicUrlVerified !== true || !isAllowedPublicAssetUrl(payload.url)) throw new Error(errorMessages.PUBLIC_URL_NOT_VERIFIED)
   onProgress?.(100)
   return payload as UploadResult
 }

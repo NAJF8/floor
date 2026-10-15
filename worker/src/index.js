@@ -141,12 +141,10 @@ async function membershipFor(uid, token, env) {
   return response.json()
 }
 
-function authorizedMembership(membership) {
+export function authorizedMembership(membership) {
   if (!membership || membership.active !== true) return false
   const role = String(membership.role || '')
-  if ((ROLE_ORDER[role] || -1) < ROLE_ORDER.MANAGER) return false
-  if (role !== 'SUPER_ADMIN' && membership.permissions && membership.permissions.manageImages !== true && membership.permissions.images !== true) return false
-  return true
+  return role === 'SUPER_ADMIN'
 }
 
 function safeSegment(value) {
@@ -172,7 +170,7 @@ export async function uploadToGitHub(file, path, env) {
   let result
   try { result = await response.json() } catch { throw new UploadFailure('RESPONSE_PARSING_FAILED', 502) }
   if (typeof result.commit?.sha !== 'string' || typeof result.content?.path !== 'string' || Number(result.content?.size) !== bytes.length) throw new UploadFailure('GITHUB_API_ERROR', 502)
-  return { commitSha: result.commit.sha, downloadUrl: typeof result.content.download_url === 'string' ? result.content.download_url : '' }
+  return { commitSha: result.commit.sha, path: result.content.path, downloadUrl: typeof result.content.download_url === 'string' ? result.content.download_url : '' }
 }
 
 async function verifyPublicUrl(url) {
@@ -208,10 +206,10 @@ export async function handleUpload(request, env) {
     const suffix = recordId ? `/${recordId}` : ''
     const path = `public/uploads/floor-232bc/${assetType}${suffix}/${Date.now()}-${randomSegment()}.${metadata.extension}`
     const github = await uploadToGitHub(file, path, env)
-    const fallbackUrl = `${String(env.PUBLIC_BASE_URL).replace(/\/$/, '')}/${path.replace(/^public\//, '')}`
-    const url = github.downloadUrl || fallbackUrl
-    const publicUrlVerified = env.VERIFY_PUBLIC_URL === 'true' ? await verifyPublicUrl(url) : false
-    if (env.VERIFY_PUBLIC_URL === 'true' && !publicUrlVerified) throw new UploadFailure('PUBLIC_URL_NOT_VERIFIED', 502)
+    if (github.path !== path) throw new UploadFailure('GITHUB_API_ERROR', 502)
+    const url = `https://raw.githubusercontent.com/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/${env.GITHUB_BRANCH}/${path}`
+    const publicUrlVerified = await verifyPublicUrl(url)
+    if (!publicUrlVerified) throw new UploadFailure('PUBLIC_URL_NOT_VERIFIED', 502)
     return json({ url, path, commitSha: github.commitSha, contentType: file.type, size: file.size, publicUrlVerified }, 201, origin)
   } catch (error) {
     const code = error instanceof UploadFailure ? error.code : 'NETWORK_ERROR'

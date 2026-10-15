@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { handleUpload, uploadToGitHub, validateUploadFile } from './index.js'
+import { authorizedMembership, handleUpload, uploadToGitHub, validateUploadFile } from './index.js'
 
 const env = {
   FIREBASE_PROJECT_ID: 'floor-232bc',
@@ -18,6 +18,13 @@ test('rejects anonymous upload requests', async () => {
   const response = await handleUpload(new Request('https://worker.example/upload', { method: 'POST', headers: { Origin: 'https://najf8.github.io' } }), env)
   assert.equal(response.status, 401)
   assert.deepEqual(await response.json(), { error: 'unauthenticated' })
+})
+
+test('requires an active SUPER_ADMIN membership for uploads', () => {
+  assert.equal(authorizedMembership({ active: true, role: 'ADMIN' }), false)
+  assert.equal(authorizedMembership({ active: true, role: 'MANAGER', permissions: { manageImages: true } }), false)
+  assert.equal(authorizedMembership({ active: false, role: 'SUPER_ADMIN' }), false)
+  assert.equal(authorizedMembership({ active: true, role: 'SUPER_ADMIN' }), true)
 })
 
 test('answers preflight without exposing secrets', async () => {
@@ -50,6 +57,6 @@ test('accepts only a complete GitHub Contents API response and returns its publi
   try {
     const file = new File([new Uint8Array(12)], 'hero.mp4', { type: 'video/mp4' })
     const result = await uploadToGitHub(file, 'public/uploads/floor-232bc/hero-media/a.mp4', { GITHUB_TOKEN: 'fixture-token', GITHUB_OWNER: 'NAJF8', GITHUB_REPO: 'floor', GITHUB_BRANCH: 'main' })
-    assert.deepEqual(result, { commitSha: 'commit-sha', downloadUrl: 'https://raw.example/a.mp4' })
+    assert.deepEqual(result, { commitSha: 'commit-sha', path: 'public/uploads/floor-232bc/hero-media/a.mp4', downloadUrl: 'https://raw.example/a.mp4' })
   } finally { globalThis.fetch = originalFetch }
 })
