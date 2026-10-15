@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test:staff-emulator": "node scripts/test-staff-emulator.mjs",
     "test:admin-demo-emulator": "node scripts/test-admin-demo-emulator.mjs",
+    "test:demo-realtime-emulator": "node scripts/test-demo-realtime-emulator.mjs",
+    "seed:admin-e2e-emulator": "node scripts/seed-admin-e2e-emulator.mjs",
     "seed:admin-demo-emulator": "node scripts/seed-admin-demo-emulator.mjs",
     "provision:super-admins": "node scripts/provision-super-admins.mjs",
     "seed:default-catalog": "node scripts/seed-default-catalog.mjs"

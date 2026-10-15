@@ -1,9 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { get, ref } from 'firebase/database'
 import { httpsCallable } from 'firebase/functions'
 import { auth, getFirebaseDatabase, googleProvider, SHOP_ID } from './firebase'
 import { getFirebaseFunctions } from './firebase'
+
+const localAdminEmulatorLogin = import.meta.env.DEV
+  && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
+  && import.meta.env.VITE_ENABLE_ADMIN_E2E_LOGIN === 'true'
+const localAdminEmail = import.meta.env.VITE_E2E_ADMIN_EMAIL || ''
+const localAdminPassword = import.meta.env.VITE_E2E_ADMIN_PASSWORD || ''
 
 type Membership = { role?: string; active?: boolean; permissions?: Record<string, boolean> }
 export type AdminSession = { loading: boolean; user: User | null; membership: Membership | null; error: string }
@@ -14,4 +20,16 @@ function FeatureIcon({ type }: { type: 'people' | 'shield' | 'chart' }) { if (ty
 function FeatureStrip() { return <div className="login-features"><div className="login-feature"><span><FeatureIcon type="people" /></span><strong>للمسؤولين فقط</strong></div><div className="login-feature"><span><FeatureIcon type="shield" /></span><strong>وصول آمن<br />ومحمي</strong></div><div className="login-feature"><span><FeatureIcon type="chart" /></span><strong>إدارة متكاملة<br />لمتجرك</strong></div></div> }
 function AuthCard({ children }: { children: ReactNode }) { return <main className="login-page"><div className="login-decor login-decor-one" aria-hidden="true" /><div className="login-decor login-decor-two" aria-hidden="true" /><section className="login-panel"><div className="login-card"><div className="login-brand"><img src={`${import.meta.env.BASE_URL}alasas-logo.jpg`} alt="شعار الأساس AL ASAS" /></div>{children}<footer>AL ASAS <span>—</span> من الأساس تبدأ الفكرة</footer></div></section></main> }
 
-export function AdminGate({ children }: { children: ReactNode }) { const state = useAdminSession(); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const login = async () => { setBusy(true); setError(''); try { await signInWithPopup(auth, googleProvider) } catch (reason) { setError(reason instanceof Error ? reason.message : 'تعذر تسجيل الدخول. تحقق من الاتصال وحاول مرة أخرى.') } finally { setBusy(false) } }; if (state.loading) return <AuthCard><div className="login-copy login-state"><h1>جارٍ التحقق من الحساب</h1><p>نؤكد صلاحية الجلسة قبل فتح مركز الإدارة.</p><div className="loader" /></div></AuthCard>; if (!state.user) return <AuthCard><div className="login-copy"><h1>مرحباً بعودتك</h1><p>سجّل الدخول للوصول إلى مركز إدارة متجرك.</p></div><button className="google-button" disabled={busy} onClick={login}><GoogleIcon /><span>{busy ? 'تسجيل الدخول جارٍ...' : 'المتابعة باستخدام Google'}</span><span className="google-arrow" aria-hidden="true">←</span></button><FeatureStrip />{error && <div className="error-box login-error">تعذر تسجيل الدخول. تحقق من الاتصال وحاول مرة أخرى.</div>}</AuthCard>; const authorized = state.user.providerData.some((provider) => provider.providerId === 'google.com') && state.user.emailVerified && Boolean(state.user.email) && state.membership?.active === true && ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || ''); if (!authorized) return <AuthCard><div className="login-copy login-state"><h1>الحساب غير مخوّل</h1><p>هذا الحساب لا يملك عضوية إدارية نشطة لهذا المتجر.</p></div><FeatureStrip />{state.error && <div className="error-box login-error">تعذر التحقق من الصلاحية. حاول لاحقاً.</div>}<button className="secondary login-signout" onClick={() => signOut(auth)}>تسجيل الخروج</button></AuthCard>; return <>{children}</> }
+export function AdminGate({ children }: { children: ReactNode }) {
+  const state = useAdminSession(); const [busy, setBusy] = useState(false); const [error, setError] = useState('')
+  const login = async () => { setBusy(true); setError(''); try { await signInWithPopup(auth, googleProvider) } catch (reason) { setError(reason instanceof Error ? reason.message : 'تعذر تسجيل الدخول. تحقق من الاتصال وحاول مرة أخرى.') } finally { setBusy(false) } }
+  const loginLocalAdmin = async () => { setBusy(true); setError(''); try { if (!localAdminEmail || !localAdminPassword) throw new Error('E2E Admin credentials are not configured.'); await signInWithEmailAndPassword(auth, localAdminEmail, localAdminPassword) } catch (reason) { setError(reason instanceof Error ? reason.message : 'تعذر تسجيل الدخول المحلي للاختبار.') } finally { setBusy(false) } }
+  if (state.loading) return <AuthCard><div className="login-copy login-state"><h1>جارٍ التحقق من الحساب</h1><p>نؤكد صلاحية الجلسة قبل فتح مركز الإدارة.</p><div className="loader" /></div></AuthCard>
+  if (!state.user) return <AuthCard><div className="login-copy"><h1>مرحباً بعودتك</h1><p>سجّل الدخول للوصول إلى مركز إدارة متجرك.</p></div><button className="google-button" disabled={busy} onClick={login}><GoogleIcon /><span>{busy ? 'تسجيل الدخول جارٍ...' : 'المتابعة باستخدام Google'}</span><span className="google-arrow" aria-hidden="true">←</span></button>{localAdminEmulatorLogin && <><p className="login-note">مسار E2E محلي فقط — Auth وRTDB Emulator مطلوبان، ولا يعمل في Production.</p><button className="secondary full" disabled={busy} onClick={loginLocalAdmin}>{busy ? 'جارٍ الدخول...' : 'دخول Admin Emulator (E2E)'}</button></>}<FeatureStrip />{error && <div className="error-box login-error">تعذر تسجيل الدخول. تحقق من الاتصال وحاول مرة أخرى.</div>}</AuthCard>
+  const googleAccount = state.user.providerData.some((provider) => provider.providerId === 'google.com')
+  const localEmulatorAccount = localAdminEmulatorLogin && state.user.providerData.some((provider) => provider.providerId === 'password')
+  const verifiedEmail = state.user.emailVerified && Boolean(state.user.email)
+  const authorized = ((googleAccount && verifiedEmail) || localEmulatorAccount) && state.membership?.active === true && ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || '')
+  if (!authorized) return <AuthCard><div className="login-copy login-state"><h1>الحساب غير مخوّل</h1><p>هذا الحساب لا يملك عضوية إدارية نشطة لهذا المتجر.</p></div><FeatureStrip />{state.error && <div className="error-box login-error">تعذر التحقق من الصلاحية. حاول لاحقاً.</div>}<button className="secondary login-signout" onClick={() => signOut(auth)}>تسجيل الخروج</button></AuthCard>
+  return <>{children}</>
+}

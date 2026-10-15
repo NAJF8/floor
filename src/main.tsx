@@ -28,7 +28,7 @@ function syncFavoriteIdsToAccount(ids: string[], replace = true) { if (!firebase
 function toggleFavoriteId(id: string): boolean { const current = readFavoriteIds(); const next = current.includes(id) ? current.filter(item => item !== id) : [...current, id]; localStorage.setItem(favoriteStorageKey, JSON.stringify(next)); syncFavoriteIdsToAccount(next, true); window.dispatchEvent(new Event('alasas-favorites-changed')); return next.includes(id) }
 function FavoriteAccountSync() { useEffect(() => onAuthStateChanged(firebaseAuth, user => { if (!user) return; const localIds = readFavoriteIds(); void httpsCallable(firebaseFunctions, 'syncCustomerFavorites')({ favoriteIds: localIds, replace: false }).then(result => { const data = result.data as { favoriteIds?: unknown }; const ids = Array.isArray(data.favoriteIds) ? data.favoriteIds.filter((id): id is string => typeof id === 'string') : localIds; localStorage.setItem(favoriteStorageKey, JSON.stringify(ids)); window.dispatchEvent(new Event('alasas-favorites-changed')) }).catch(() => undefined) }), []); return null }
 
-type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; publicConfig: ShopPublicConfig }
+type CatalogState = { products: Product[]; categories: [string, string, string][]; live: boolean; loading: boolean; error: string; retry: () => void; publicConfig: ShopPublicConfig }
 const CatalogContext = createContext<CatalogState | null>(null)
 const fallbackProductImage = `${import.meta.env.BASE_URL}alasas-logo.jpg`
 function mapCatalogProduct(record: FlowerProductRecord): Product {
@@ -63,11 +63,19 @@ function CatalogProvider({ children }: { children: React.ReactNode }) {
   const [categoryRecords, setCategoryRecords] = useState<FlowerCategoryRecord[]>([])
   const [publicConfig, setPublicConfig] = useState<ShopPublicConfig>({ paymentMethods: {}, delivery: {}, settings: {}, homepage: {}, aiAssistant: {} })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  useEffect(() => subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false) }, reason => { setError(reason.message); setLoading(false) }), [])
-  useEffect(() => subscribeToShopDemoProducts('floor-232bc', setDemoRecords, () => undefined), [])
-  useEffect(() => subscribeToShopCategories('floor-232bc', setCategoryRecords, reason => setError(reason.message)), [])
-  useEffect(() => subscribeToShopPublicConfig('floor-232bc', setPublicConfig, reason => setError(reason.message)), [])
+  const [sourceErrors, setSourceErrors] = useState<Record<string, string>>({})
+  const [retryToken, setRetryToken] = useState(0)
+  const setSourceError = (source: string, reason?: Error) => setSourceErrors(current => {
+    const next = { ...current }
+    if (reason) next[source] = reason.message || 'تعذر الاتصال بـ Firebase.'
+    else delete next[source]
+    return next
+  })
+  const retry = () => setRetryToken(value => value + 1)
+  useEffect(() => { setLoading(true); return subscribeToShopProducts('floor-232bc', value => { setRecords(value); setLoading(false); setSourceError('products') }, reason => { setSourceError('products', reason); setLoading(false) }) }, [retryToken])
+  useEffect(() => subscribeToShopDemoProducts('floor-232bc', value => { setDemoRecords(value); setSourceError('demoProducts') }, reason => setSourceError('demoProducts', reason)), [retryToken])
+  useEffect(() => subscribeToShopCategories('floor-232bc', value => { setCategoryRecords(value); setSourceError('categories') }, reason => setSourceError('categories', reason)), [retryToken])
+  useEffect(() => subscribeToShopPublicConfig('floor-232bc', value => { setPublicConfig(value); setSourceError('publicConfig') }, reason => setSourceError('publicConfig', reason)), [retryToken])
   useEffect(() => {
     const settings = publicConfig.settings as Record<string, unknown>
     const assistant = publicConfig.aiAssistant as Record<string, unknown>
@@ -94,15 +102,16 @@ function CatalogProvider({ children }: { children: React.ReactNode }) {
   const liveProducts = records.map(mapCatalogProduct)
   const demoProducts = demoRecords.map(mapCatalogProduct)
   const liveCategories: [string, string, string][] = categoryRecords.map(record => [record.name, record.description || 'اكتشف تشكيلات الأساس', record.image || 'photo-1523438885200-e635ba2c371e'])
-  return <CatalogContext.Provider value={{ products: [...liveProducts, ...demoProducts], categories: liveCategories, live: liveProducts.length > 0, loading, error, publicConfig }}>{children}</CatalogContext.Provider>
+  const error = Object.values(sourceErrors).find(Boolean) || ''
+  return <CatalogContext.Provider value={{ products: [...liveProducts, ...demoProducts], categories: liveCategories, live: liveProducts.length > 0, loading, error, retry, publicConfig }}>{children}</CatalogContext.Provider>
 }
 function useCatalog() { const value = useContext(CatalogContext); if (!value) throw new Error('useCatalog must be used inside CatalogProvider'); return value }
 function CatalogConnectionNotice() {
-  const { loading, error } = useCatalog(); const [online, setOnline] = useState(() => navigator.onLine)
+  const { loading, error, retry } = useCatalog(); const [online, setOnline] = useState(() => navigator.onLine)
   useEffect(() => { const changed = () => setOnline(navigator.onLine); window.addEventListener('online', changed); window.addEventListener('offline', changed); return () => { window.removeEventListener('online', changed); window.removeEventListener('offline', changed) } }, [])
   if (!online) return <div className="demo-note" role="status">أنت غير متصل حالياً؛ ستتحدث البيانات تلقائياً بعد عودة الاتصال.</div>
   if (loading) return <div className="demo-note" role="status">جارٍ تحميل الكتالوج من Firebase...</div>
-  if (error) return <div className="demo-note" role="alert">تعذر تحديث الكتالوج الآن؛ ستتم إعادة المحاولة عند عودة الاتصال.</div>
+  if (error) return <div className="demo-note" role="alert">تعذر تحديث بيانات Firebase؛ لم نستخدم بيانات بديلة. <button type="button" onClick={retry}>إعادة المحاولة</button></div>
   return null
 }
 

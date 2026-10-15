@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth'
 import { get, ref } from 'firebase/database'
 import { firebaseAuth, firebaseDatabase, googleProvider, SHOP_ID } from './firebase'
 
@@ -19,6 +19,11 @@ type SessionState = {
 }
 
 const initialState: SessionState = { loading: true, user: null, membership: null, error: '' }
+const localAdminEmulatorLogin = import.meta.env.DEV
+  && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
+  && import.meta.env.VITE_ENABLE_ADMIN_E2E_LOGIN === 'true'
+const localAdminEmail = import.meta.env.VITE_E2E_ADMIN_EMAIL || ''
+const localAdminPassword = import.meta.env.VITE_E2E_ADMIN_PASSWORD || ''
 
 function useAdminSession() {
   const [state, setState] = useState<SessionState>(initialState)
@@ -66,6 +71,19 @@ export function AdminGate({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginLocalAdmin = async () => {
+    setBusy(true)
+    setActionError('')
+    try {
+      if (!localAdminEmail || !localAdminPassword) throw new Error('E2E Admin credentials are not configured.')
+      await signInWithEmailAndPassword(firebaseAuth, localAdminEmail, localAdminPassword)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'تعذر تسجيل الدخول المحلي للاختبار.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (state.loading) return <AuthMessage><p>جارٍ التحقق من جلسة Firebase...</p></AuthMessage>
 
   if (!state.user) return <AuthMessage>
@@ -73,12 +91,18 @@ export function AdminGate({ children }: { children: ReactNode }) {
     <h1>تسجيل دخول Google مطلوب</h1>
     <p>لا يمنح تسجيل Google صلاحيات الإدارة تلقائياً. يجب أن توجد عضوية Firebase موثقة لهذا الحساب.</p>
     <button className="btn btn-dark full" disabled={busy} onClick={login}>{busy ? 'جارٍ فتح Google...' : 'تسجيل الدخول عبر Google'}</button>
+    {localAdminEmulatorLogin && <>
+      <p className="demo-note">مسار E2E محلي فقط — Auth وRTDB Emulator مطلوبان، ولا يعمل في Production.</p>
+      <button className="btn btn-lime full" disabled={busy} onClick={loginLocalAdmin}>{busy ? 'جارٍ الدخول...' : 'دخول Admin Emulator (E2E)'}</button>
+    </>}
     {actionError && <p className="auth-error">{actionError}</p>}
   </AuthMessage>
 
   const googleAccount = state.user.providerData.some((provider) => provider.providerId === 'google.com')
+  const localEmulatorAccount = localAdminEmulatorLogin && state.user.providerData.some((provider) => provider.providerId === 'password')
   const verifiedEmail = state.user.emailVerified && Boolean(state.user.email)
-  const authorized = googleAccount && verifiedEmail && state.membership?.active === true && ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || '')
+  const authorizedProvider = (googleAccount && verifiedEmail) || localEmulatorAccount
+  const authorized = authorizedProvider && state.membership?.active === true && ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'EMPLOYEE', 'VIEWER'].includes(state.membership.role || '')
 
   if (!authorized) return <AuthMessage>
     <div className="eyebrow">تم التعرف على الحساب</div>
