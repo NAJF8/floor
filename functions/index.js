@@ -64,7 +64,7 @@ function adminWritePolicy(path) {
   if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..') || path.includes('//')) throw new HttpsError('invalid-argument', 'Invalid administrative path.')
   const suffix = path.slice(prefix.length)
   if (suffix === 'products' || suffix.startsWith('products/')) return { permission: 'products', minimumRole: 'MANAGER' }
-  if (suffix.startsWith('public/categories') || suffix.startsWith('public/discounts') || suffix.startsWith('public/delivery') || suffix.startsWith('public/paymentMethods') || suffix.startsWith('public/homepage') || suffix.startsWith('public/aiAssistant')) return { permission: 'catalog', minimumRole: 'MANAGER' }
+  if (suffix.startsWith('public/categories') || suffix.startsWith('public/discounts') || suffix.startsWith('public/delivery') || suffix.startsWith('public/paymentMethods') || suffix.startsWith('public/homepage') || suffix.startsWith('public/aiAssistant') || suffix.startsWith('public/gifting')) return { permission: 'catalog', minimumRole: 'MANAGER' }
   if (suffix.startsWith('public/settings')) return { permission: 'settings', minimumRole: 'ADMIN' }
   if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'MANAGER' }
   if (suffix === 'private/staff' || suffix.startsWith('private/staff/')) throw new HttpsError('permission-denied', 'Use setStaffMembership to link a verified Firebase UID.')
@@ -76,6 +76,7 @@ function adminReadPolicy(path) {
   if (typeof path !== 'string' || !path.startsWith(prefix) || path.includes('..') || path.includes('//')) throw new HttpsError('invalid-argument', 'Invalid administrative path.')
   const suffix = path.slice(prefix.length)
   if (suffix === 'products' || suffix.startsWith('products/')) return { permission: 'products', minimumRole: 'VIEWER' }
+  if (suffix === 'public/gifting' || suffix.startsWith('public/gifting/')) return { permission: 'catalog', minimumRole: 'VIEWER' }
   if (suffix === 'private/orders' || suffix.startsWith('private/orders/')) return { permission: 'orders', minimumRole: 'VIEWER' }
   if (suffix === 'private/inventory' || suffix.startsWith('private/inventory/')) return { permission: 'inventory', minimumRole: 'VIEWER' }
   if (suffix === 'private/customers' || suffix.startsWith('private/customers/')) return { permission: 'customers', minimumRole: 'MANAGER' }

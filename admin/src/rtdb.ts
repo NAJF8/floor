@@ -13,6 +13,7 @@ const directRoots = [
   `shops/${SHOP_ID}/public/homepage`,
   `shops/${SHOP_ID}/public/settings`,
   `shops/${SHOP_ID}/public/aiAssistant`,
+  `shops/${SHOP_ID}/public/gifting`,
   `shops/${SHOP_ID}/private/inventory`,
 ]
 

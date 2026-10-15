@@ -8,7 +8,7 @@ import { subscribeMap } from './rtdb'
 
 const links = [
   ['/', 'الرئيسية', 'home'], ['categories', 'الأقسام', 'grid'], ['products', 'المنتجات', 'box'], ['orders', 'الطلبات', 'cart'],
-  ['inventory', 'المخزون', 'warehouse'], ['discounts', 'الخصومات', 'tag'], ['customers', 'العملاء', 'people'], ['delivery', 'التوصيل', 'truck'],
+  ['inventory', 'المخزون', 'warehouse'], ['discounts', 'الخصومات', 'tag'], ['customers', 'العملاء', 'people'], ['delivery', 'التوصيل', 'truck'], ['gifting', 'الإهداءات والبطاقات', 'gift'], ['bouquet-options', 'خيارات تصميم الباقات', 'palette'],
   ['payments', 'معلومات الدفع والتحويل', 'card'], ['homepage', 'الصفحة الرئيسية', 'layout'], ['settings', 'إعدادات المتجر', 'settings'], ['ai', 'مساعد AI', 'sparkle'],
   ['staff', 'الموظفون والصلاحيات', 'people'], ['reports', 'التقارير والسجلات', 'chart'], ['activity-logs', 'سجل النشاط', 'history'], ['import-export', 'الاستيراد والتصدير', 'upload'],
 ] as const
