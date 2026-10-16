@@ -51,7 +51,7 @@ export type DeliveryAreaRecord = { price: number; enabled?: boolean; deliveryAt?
 export type DeliveryProvinceRecord = { enabled?: boolean; areas?: Record<string, DeliveryAreaRecord>; districts?: Record<string, DeliveryAreaRecord> }
 export type GiftAddonRecord = { id: string; name: string; nameEn?: string; category?: string; price: number; image?: string; stock?: number; enabled: boolean; bouquetCompatible: boolean; order?: number }
 export type BouquetOptionRecord = { id: string; label: string; labelEn?: string; price: number; image?: string; enabled: boolean; order?: number }
-export type GreetingCardTemplateRecord = { id: string; occasion?: string; text: string; price: number; enabled: boolean; order?: number }
+export type GreetingCardTemplateRecord = { id: string; occasion?: string; text: string; price: number; image?: string; enabled: boolean; order?: number }
 export type GiftConfig = {
   flowerTypes: BouquetOptionRecord[]
   flowerColors: BouquetOptionRecord[]
@@ -126,7 +126,7 @@ function cardList(value: unknown): GreetingCardTemplateRecord[] {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return []
     const item = raw as Record<string, unknown>
     if (item.enabled === false || typeof item.text !== 'string' || item.text.length > 500 || !Number.isInteger(item.price) || Number(item.price) < 0) return []
-    return [{ id, occasion: typeof item.occasion === 'string' ? item.occasion : undefined, text: item.text, price: Number(item.price), enabled: true, order: Number.isInteger(item.order) ? Number(item.order) : 0 }]
+    return [{ id, occasion: typeof item.occasion === 'string' ? item.occasion : undefined, text: item.text, price: Number(item.price), image: typeof item.image === 'string' ? item.image : undefined, enabled: true, order: Number.isInteger(item.order) ? Number(item.order) : 0 }]
   }).sort((a, b) => (a.order || 0) - (b.order || 0))
 }
 
