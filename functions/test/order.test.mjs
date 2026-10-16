@@ -103,3 +103,15 @@ test('persists sanitized cart options without trusting them for price', () => {
   assert.deepEqual(result.items[0].addOns, ['Ribbon'])
   assert.equal(result.items[0].giftMessage, 'Happy day')
 })
+
+test('prices greeting card and gift add-on from Firebase gifting config', () => {
+  const result = calculateOrder({ ...input, items: [{ productId: 'red', quantity: 1, gifting: { addonIds: ['chocolate'], cardId: 'birthday', cardMessage: 'كل عام وأنت بخير' }, price: 1 }] }, { red: { name: 'Red bouquet', price: 40000, active: true, status: 'PUBLISHED', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }, {}, {}, { addons: { chocolate: { name: 'Chocolate', price: 12000, enabled: true, stock: 3 } }, cards: { birthday: { text: 'Happy birthday', price: 2500, enabled: true } } })
+  assert.equal(result.items[0].customization, 14500)
+  assert.equal(result.subtotal, 54500)
+  assert.equal(result.total, 59500)
+  assert.equal(result.items[0].gifting.cardMessage, 'كل عام وأنت بخير')
+})
+
+test('rejects gifting option that is hidden or out of stock', () => {
+  assert.throws(() => calculateOrder({ ...input, items: [{ productId: 'red', quantity: 1, gifting: { addonIds: ['chocolate'] } }] }, { red: { name: 'Red bouquet', price: 40000, active: true, status: 'PUBLISHED', stock: 3 } }, { Najaf: { areas: { University: { price: 5000 } } } }, { cash: { name: 'Cash', type: 'CASH', enabled: true } }, {}, {}, { addons: { chocolate: { name: 'Chocolate', price: 12000, enabled: true, stock: 0 } } }), /GIFTING_OPTION_OUT_OF_STOCK/)
+})

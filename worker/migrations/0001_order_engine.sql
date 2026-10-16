@@ -72,6 +72,20 @@ CREATE TABLE IF NOT EXISTS store_settings (
   temporary_closed INTEGER NOT NULL CHECK (temporary_closed IN (0, 1))
 );
 
+CREATE TABLE IF NOT EXISTS gifting_options (
+  shop_id TEXT NOT NULL,
+  group_name TEXT NOT NULL,
+  option_id TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
+  price_iqd INTEGER NOT NULL CHECK (price_iqd >= 0),
+  enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+  stock INTEGER,
+  bouquet_compatible INTEGER NOT NULL DEFAULT 1 CHECK (bouquet_compatible IN (0, 1)),
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (shop_id, group_name, option_id)
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   order_id TEXT PRIMARY KEY,
   shop_id TEXT NOT NULL,

@@ -441,7 +441,7 @@ function GiftCollection({ tab }: { tab: GiftAdminTab }) {
 }
 const giftAdminTabsV2: GiftAdminTab[] = [
   { key: 'addons', title: 'إضافات الهدايا', path: 'admin/gifting/addons', fields: ['name', 'nameEn', 'category', 'price', 'stock', 'image', 'order', 'enabled', 'bouquetCompatible'] },
-  { key: 'cards', title: 'قوالب الكروت', path: 'admin/gifting/cards', fields: ['text', 'occasion', 'price', 'order', 'enabled'] },
+  { key: 'cards', title: 'قوالب الكروت', path: 'admin/gifting/cards', fields: ['text', 'occasion', 'price', 'image', 'order', 'enabled'] },
   { key: 'occasions', title: 'المناسبات', path: 'admin/gifting/occasions', fields: ['label', 'labelEn', 'price', 'order', 'enabled'] },
   { key: 'flowerTypes', title: 'أنواع الورد', path: 'admin/gifting/flowerTypes', fields: ['label', 'labelEn', 'price', 'order', 'enabled'] },
   { key: 'flowerColors', title: 'ألوان الورد', path: 'admin/gifting/flowerColors', fields: ['label', 'labelEn', 'price', 'order', 'enabled'] },

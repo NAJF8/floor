@@ -36,7 +36,7 @@ async function fixture() {
   const db = new DatabaseSync(':memory:')
   db.exec(readFileSync(new URL('../migrations/0001_order_engine.sql', import.meta.url), 'utf8'))
   const api = d1(db)
-  await syncCatalogToD1(api, { version: 1, sourceUpdatedAt: 1700000000000, products: [{ productId: 'real-rose', name: 'Real Rose', category: 'roses', price: 25000, status: 'PUBLISHED', active: true, orderable: true }] })
+  await syncCatalogToD1(api, { version: 1, sourceUpdatedAt: 1700000000000, products: [{ productId: 'real-rose', name: 'Real Rose', category: 'roses', price: 25000, status: 'PUBLISHED', active: true, orderable: true }], gifting: { addons: { chocolate: { name: 'Chocolate', price: 12000, enabled: true, stock: 3 } }, cards: { birthday: { text: 'Birthday', price: 2500, enabled: true } } } })
   await seedInventoryToD1(api, { inventory: [{ productId: 'real-rose', availableQuantity: 1 }] })
   db.prepare('INSERT INTO delivery_areas VALUES (?, ?, ?, ?, ?)').run('floor-232bc', 'Baghdad', 'Mansour', 5000, 1)
   db.prepare('INSERT INTO payment_methods VALUES (?, ?, ?, ?, ?)').run('floor-232bc', 'cash', 'Cash', 'CASH', 1)
@@ -58,6 +58,12 @@ test('VALID_ORDER_CREATE and PRICE_TAMPERING_REJECTED', async () => {
   assert.equal(result.reused, false)
   assert.equal(result.total, 30000)
   assert.equal(db.prepare('SELECT COUNT(*) AS count FROM order_items').get().count, 1)
+})
+
+test('D1_GIFTING_PRICE_VALIDATION', async () => {
+  const { api } = await fixture()
+  const result = await api.createOrder({ uid: 'customer-1', input: orderInput('gift-price', { items: [{ productId: 'real-rose', quantity: 1, price: 1, gifting: { addonIds: ['chocolate'], cardId: 'birthday', cardMessage: 'Hello' } }] }) })
+  assert.equal(result.total, 44500)
 })
 
 for (const state of [{ demoTag: 'ALASAS_DEMO_V1' }, { status: 'DRAFT' }, { status: 'HIDDEN' }, { status: 'ARCHIVED' }, { active: false }, { orderable: false }]) test(`DEMO_DRAFT_HIDDEN_REJECTED_${JSON.stringify(state)}`, async () => {

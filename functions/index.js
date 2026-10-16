@@ -508,7 +508,7 @@ export const setOrderStatus = onCall({ region: 'europe-west1', enforceAppCheck: 
 
 function toHttpsError(error) {
   const code = error instanceof Error ? error.message : 'INVALID_ORDER'
-  const known = new Set(['INVALID_ORDER', 'INVALID_ITEMS', 'INVALID_ITEM', 'DUPLICATE_PRODUCT', 'INVALID_PRODUCT_ID', 'INVALID_QUANTITY', 'INVALID_CUSTOMER_NAME', 'INVALID_PHONE', 'INVALID_RECIPIENT_NAME', 'INVALID_RECIPIENT_PHONE', 'INVALID_PROVINCE', 'INVALID_DISTRICT', 'INVALID_ADDRESS', 'INVALID_DELIVERY_AT', 'INVALID_PAYMENT_METHOD_ID', 'INVALID_IDEMPOTENCY_KEY', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'PAYMENT_METHOD_UNAVAILABLE', 'DELIVERY_AREA_UNCONFIGURED', 'DISCOUNT_UNAVAILABLE', 'ORDERS_CLOSED'])
+  const known = new Set(['INVALID_ORDER', 'INVALID_ITEMS', 'INVALID_ITEM', 'DUPLICATE_PRODUCT', 'INVALID_PRODUCT_ID', 'INVALID_QUANTITY', 'INVALID_CUSTOMER_NAME', 'INVALID_PHONE', 'INVALID_RECIPIENT_NAME', 'INVALID_RECIPIENT_PHONE', 'INVALID_PROVINCE', 'INVALID_DISTRICT', 'INVALID_ADDRESS', 'INVALID_DELIVERY_AT', 'INVALID_PAYMENT_METHOD_ID', 'INVALID_IDEMPOTENCY_KEY', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'GIFTING_OPTION_UNAVAILABLE', 'GIFTING_OPTION_OUT_OF_STOCK', 'PAYMENT_METHOD_UNAVAILABLE', 'DELIVERY_AREA_UNCONFIGURED', 'DISCOUNT_UNAVAILABLE', 'ORDERS_CLOSED'])
   return new HttpsError(known.has(code) ? 'failed-precondition' : 'internal', known.has(code) ? code : 'Order creation failed safely.')
 }
 
@@ -536,14 +536,15 @@ export const createOrder = onCall({ region: 'europe-west1', enforceAppCheck: fal
   let preparedOrder = null
 
   try {
-    const [productsSnapshot, deliverySnapshot, paymentSnapshot, discountsSnapshot, settingsSnapshot] = await Promise.all([
+    const [productsSnapshot, deliverySnapshot, paymentSnapshot, discountsSnapshot, settingsSnapshot, giftingSnapshot] = await Promise.all([
       database.ref(`shops/${SHOP_ID}/products`).get(),
       database.ref(`shops/${SHOP_ID}/public/delivery`).get(),
       database.ref(`shops/${SHOP_ID}/public/paymentMethods`).get(),
       database.ref(`shops/${SHOP_ID}/public/discounts`).get(),
       database.ref(`shops/${SHOP_ID}/public/settings`).get(),
+      database.ref(`shops/${SHOP_ID}/public/gifting`).get(),
     ])
-    const order = calculateOrder(input, productsSnapshot.val() || {}, deliverySnapshot.val() || {}, paymentSnapshot.val() || {}, discountsSnapshot.val() || {}, settingsSnapshot.val() || {})
+    const order = calculateOrder(input, productsSnapshot.val() || {}, deliverySnapshot.val() || {}, paymentSnapshot.val() || {}, discountsSnapshot.val() || {}, settingsSnapshot.val() || {}, giftingSnapshot.val() || {})
     preparedOrder = order
     if (order.discountDetail?.id) {
       const discountRef = database.ref(`shops/${SHOP_ID}/public/discounts/${order.discountDetail.id}`)

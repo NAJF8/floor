@@ -1,4 +1,5 @@
 export const SHOP_ID = 'floor-232bc'
+import { calculateGiftingTotal } from './gifting.js'
 
 const MAX_ITEMS = 40
 const MAX_QUANTITY = 99
@@ -52,6 +53,12 @@ export function normalizeOrderInput(input) {
       ...(typeof item.packaging === 'string' ? { packaging: item.packaging.trim().slice(0, 120) } : {}),
       ...(typeof item.packagingColor === 'string' ? { packagingColor: item.packagingColor.trim().slice(0, 80) } : {}),
       ...(typeof item.giftMessage === 'string' ? { giftMessage: item.giftMessage.trim().slice(0, 500) } : {}),
+      ...(item.gifting && typeof item.gifting === 'object' && !Array.isArray(item.gifting) ? { gifting: {
+        optionIds: item.gifting.optionIds && typeof item.gifting.optionIds === 'object' && !Array.isArray(item.gifting.optionIds) ? Object.fromEntries(Object.entries(item.gifting.optionIds).filter(([key, value]) => /^[A-Za-z0-9_-]{1,80}$/.test(key) && typeof value === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(value)).slice(0, 12)) : {},
+        addonIds: Array.isArray(item.gifting.addonIds) ? item.gifting.addonIds.filter((value) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(value)).slice(0, 30) : [],
+        ...(typeof item.gifting.cardId === 'string' && /^[A-Za-z0-9_-]{1,120}$/.test(item.gifting.cardId) ? { cardId: item.gifting.cardId } : {}),
+        ...(typeof item.gifting.cardMessage === 'string' ? { cardMessage: item.gifting.cardMessage.trim().slice(0, 2000) } : {}),
+      } } : {}),
     }
   })
   const idempotencyKey = text(input.idempotencyKey, 'idempotency_key', 120)
@@ -131,15 +138,20 @@ function discountAmount(discount, items, products, subtotal, couponCode, now) {
   return amount > 0 ? { id: discount.id, name: typeof discount.name === 'string' ? discount.name : '', code, amount } : null
 }
 
-export function calculateOrder(input, products, delivery, paymentMethods, discounts = {}, settings = {}) {
+export function calculateOrder(input, products, delivery, paymentMethods, discounts = {}, settings = {}, giftingConfig = {}) {
   const normalized = normalizeOrderInput(input)
   if (settings?.acceptingOrders === false || settings?.temporaryClosed === true) throw new Error('ORDERS_CLOSED')
-  const resolvedItems = normalized.items.map(({ productId, quantity, addOns, packaging, packagingColor, giftMessage }) => {
+  const resolvedItems = normalized.items.map(({ productId, quantity, addOns, packaging, packagingColor, giftMessage, gifting }) => {
     const product = products?.[productId]
     if (!productIsPublished(product) || !Number.isInteger(product.price) || product.price < 0) throw new Error('PRODUCT_UNAVAILABLE')
     if (Number.isInteger(product.stock) && product.stock < quantity) throw new Error('INSUFFICIENT_STOCK')
     const defaultAddOns = Array.isArray(product.addOns) ? product.addOns.filter((item) => typeof item === 'string') : []
     const selectedAddOns = Array.isArray(addOns) ? addOns.filter((item) => defaultAddOns.includes(item)) : defaultAddOns
+    let customization = 0
+    if (gifting && (Object.keys(gifting.optionIds).length || gifting.addonIds.length || gifting.cardId)) {
+      const priced = calculateGiftingTotal({ config: giftingConfig, product: { ...product, status: product.status || 'PUBLISHED' }, optionIds: gifting.optionIds, addonIds: gifting.addonIds, cardId: gifting.cardId || '', deliveryFee: 0 })
+      customization = priced.customization
+    }
     return {
       productId,
       name: text(product.name, 'product_name', 200),
@@ -152,7 +164,9 @@ export function calculateOrder(input, products, delivery, paymentMethods, discou
       addOns: selectedAddOns,
       ...(giftMessage ? { giftMessage } : {}),
       inventoryRecipe: normalizeRecipe(product.inventoryRecipe || product.recipe),
-      lineTotal: product.price * quantity,
+      ...(gifting ? { gifting } : {}),
+      customization,
+      lineTotal: (product.price + customization) * quantity,
     }
   })
   const paymentMethod = paymentMethods?.[normalized.paymentMethodId]
