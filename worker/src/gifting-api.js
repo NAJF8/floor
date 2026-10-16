@@ -102,7 +102,8 @@ function pathParts(path, operation) {
 
 export async function handleGiftingRequest(request, env, dependencies = {}) {
   const { origin, allowed } = allowedOrigin(request, env)
-  if (!allowed) return json({ error: 'origin_not_allowed' }, 403, origin)
+  const safeOrigin = allowed ? origin : ''
+  if (!allowed) return json({ error: 'origin_not_allowed' }, 403, safeOrigin)
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) })
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, origin)
   try {
