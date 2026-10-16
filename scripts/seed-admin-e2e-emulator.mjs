@@ -3,6 +3,7 @@ import { getDatabase } from 'firebase-admin/database'
 
 const SHOP_ID = 'floor-232bc'
 const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST || ''
+const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'
 const email = process.env.VITE_E2E_ADMIN_EMAIL || 'admin-e2e@example.test'
 const password = process.env.VITE_E2E_ADMIN_PASSWORD || 'LocalOnly-123456'
 const fixtureId = 'admin-e2e-demo'
@@ -14,7 +15,7 @@ const app = initializeApp({ projectId: SHOP_ID, databaseURL: `http://${host}?ns=
 const database = getDatabase(app)
 
 async function authRequest(endpoint, body) {
-  const response = await fetch(`http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/${endpoint}?key=local-emulator-key`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/${endpoint}?key=local-emulator-key`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
   const text = await response.text()
   const data = JSON.parse(text)
   if (!response.ok) throw new Error(`Auth Emulator ${endpoint} failed (${response.status}): ${text}`)

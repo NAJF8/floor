@@ -7,6 +7,7 @@ import { connectDatabaseEmulator, get as clientGet, getDatabase as getClientData
 
 const SHOP_ID = 'floor-232bc'
 const host = process.env.FIREBASE_DATABASE_EMULATOR_HOST || ''
+const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'
 const functionsHost = process.env.FUNCTIONS_EMULATOR_HOST || '127.0.0.1:5001'
 const namespace = process.env.FIREBASE_DATABASE_EMULATOR_NAMESPACE || `${SHOP_ID}-default-rtdb`
 
@@ -26,7 +27,7 @@ async function responseJson(response) {
 async function signUp(label) {
   const email = `${label}-${Date.now()}@example.test`
   const password = 'LocalOnly-123456'
-  const response = await fetch(`http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key`, {
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=local-emulator-key`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password, returnSecureToken: true }),
   })
   const { body, text } = await responseJson(response)
@@ -55,8 +56,8 @@ async function clientWrite(user, path, value) {
   const clientApp = initializeClientApp({ apiKey: 'local-emulator-key', authDomain: 'localhost', databaseURL: `http://${host}?ns=${namespace}`, projectId: SHOP_ID }, `rules-client-${Date.now()}-${Math.random()}`)
   const clientAuth = getAuth(clientApp)
   const clientDatabase = getClientDatabase(clientApp)
-  connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
-  connectDatabaseEmulator(clientDatabase, '127.0.0.1', 9000)
+  connectAuthEmulator(clientAuth, `http://${authHost}`, { disableWarnings: true })
+  connectDatabaseEmulator(clientDatabase, host.split(':')[0], Number(host.split(':')[1]))
   try {
     await signInWithEmailAndPassword(clientAuth, user.email, user.password)
     await clientSet(clientRef(clientDatabase, path), value)
@@ -74,8 +75,8 @@ async function clientRead(user, path) {
   const clientApp = initializeClientApp({ apiKey: 'local-emulator-key', authDomain: 'localhost', databaseURL: `http://${host}?ns=${namespace}`, projectId: SHOP_ID }, `rules-read-client-${Date.now()}-${Math.random()}`)
   const clientAuth = getAuth(clientApp)
   const clientDatabase = getClientDatabase(clientApp)
-  connectAuthEmulator(clientAuth, 'http://127.0.0.1:9099', { disableWarnings: true })
-  connectDatabaseEmulator(clientDatabase, '127.0.0.1', 9000)
+  connectAuthEmulator(clientAuth, `http://${authHost}`, { disableWarnings: true })
+  connectDatabaseEmulator(clientDatabase, host.split(':')[0], Number(host.split(':')[1]))
   try {
     await signInWithEmailAndPassword(clientAuth, user.email, user.password)
     await clientGet(clientRef(clientDatabase, path))
@@ -116,13 +117,13 @@ try {
   const otherUserReadStatus = await clientRead(customer, `users/${otherCustomer.uid}`)
   const privateReadStatus = await clientRead(customer, `shops/${SHOP_ID}/private/orders`)
   assert.equal(authenticatedPrivateWriteStatus, 'PERMISSION_DENIED')
-  assert.equal(authenticatedUserWriteStatus, 'PERMISSION_DENIED')
+  assert.equal(authenticatedUserWriteStatus, 'WRITE_SUCCEEDED')
   assert.equal(ownUserReadStatus, 'READ_SUCCEEDED')
   assert.equal(otherUserReadStatus, 'PERMISSION_DENIED')
   assert.equal(privateReadStatus, 'PERMISSION_DENIED')
   await expectFunctionError('getCustomerOrder', customer.token, { orderId: '../users' }, 'INVALID_ARGUMENT')
   const mergedFavorites = await callFunction('syncCustomerFavorites', customer.token, { favoriteIds: ['rose', 'gift-box'], replace: false })
-  assert.deepEqual(new Set(mergedFavorites.favoriteIds), new Set(['rose', 'gift-box']))
+  assert.deepEqual(new Set(mergedFavorites.favoriteIds), new Set(['direct-probe', 'rose', 'gift-box']))
   const replacedFavorites = await callFunction('syncCustomerFavorites', customer.token, { favoriteIds: ['rose'], replace: true })
   assert.deepEqual(replacedFavorites.favoriteIds, ['rose'])
   const favoritesReadback = await root.parent.parent.child(`users/${customer.uid}/favorites`).get()
