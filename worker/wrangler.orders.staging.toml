@@ -5,9 +5,18 @@ compatibility_date = "2026-10-14"
 
 [vars]
 ORDERS_ENABLED = "false"
-# Replace only with an approved HTTPS Staging Customer/Admin origin before deployment.
-ALLOWED_ORIGINS = "https://<approved-staging-origin>"
-FIREBASE_SHOP_ID = "<approved-staging-shop-id>"
+ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+FIREBASE_PROJECT_ID = "floor-232bc-staging"
+FIREBASE_SHOP_ID = "floor-232bc"
+GIFTING_RATE_LIMITER_REQUIRED = "true"
+
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "74016"
+
+[ratelimits.simple]
+limit = 60
+period = 60
 
 [[d1_databases]]
 binding = "DB"
@@ -15,8 +24,7 @@ database_name = "alasas-floor-orders-staging"
 database_id = "c45335a4-be16-4c8d-aded-2a2ce33836f0"
 migrations_dir = "migrations"
 
-# Configure outside Git, only after a separate Firebase Staging project exists:
-# FIREBASE_PROJECT_ID
+# Configure outside Git, only after a separate Firebase Staging RTDB exists (Blaze approval required):
 # FIREBASE_DATABASE_URL
 # FIREBASE_SERVICE_ACCOUNT_EMAIL
 # FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY

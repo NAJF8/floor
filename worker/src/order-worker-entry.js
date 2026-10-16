@@ -19,7 +19,8 @@ async function adminClaims(request, env, rtdb) {
 
 export async function handleOrderRequest(request, env) {
   const { origin, allowed } = allowedOrigin(request, env)
-  const send = (value, status = 200) => response(value, status, origin)
+  const safeOrigin = allowed ? origin : ''
+  const send = (value, status = 200) => response(value, status, safeOrigin)
   if (!allowed) return send({ error: 'ORIGIN_NOT_ALLOWED' }, 403)
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true', 'access-control-allow-methods': 'POST, GET, OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type' } })
   if (!env.DB) return send({ error: 'D1_NOT_CONFIGURED' }, 503)
@@ -32,6 +33,11 @@ export async function handleOrderRequest(request, env) {
       await enforceRateLimit(request, env, user.uid)
       return send(await repository.createOrder({ uid: user.uid, input: await readJsonBody(request) }), 201)
     }
+    if (url.pathname.startsWith('/orders/') && request.method === 'GET') {
+      const user = await authenticated(request, env)
+      const orderId = url.pathname.split('/')[2]
+      return send(await createD1AdminApi(env.DB).getCustomerOrder({ uid: user.uid, orderId }))
+    }
     if (url.pathname.startsWith('/admin/orders')) {
       const rtdb = createRtdbAdapter({ env })
       const claims = await adminClaims(request, env, rtdb)
@@ -42,13 +48,14 @@ export async function handleOrderRequest(request, env) {
       await enforceRateLimit(request, env, claims.uid)
       const body = await readJsonBody(request)
       if (body.action === 'cancel') return send(await admin.cancelOrder({ claims, orderId }))
+      if (body.action === 'schedule') return send(await admin.scheduleDelivery({ claims, orderId, deliveryAt: body.deliveryAt }))
       return send(await admin.updateStatus({ claims, orderId, nextStatus: body.status }))
     }
     return send({ error: 'NOT_FOUND' }, 404)
   } catch (error) {
-    const known = ['UNAUTHENTICATED', 'ADMIN_PERMISSION_DENIED', 'DUPLICATE_ORDER', 'DEMO_ORDER_REJECTED', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'GIFTING_OPTION_UNAVAILABLE', 'GIFTING_OPTION_OUT_OF_STOCK', 'INVALID_DELIVERY', 'INVALID_PAYMENT', 'CATALOG_OUT_OF_SYNC', 'REQUEST_BODY_TOO_LARGE', 'RATE_LIMITED', 'RATE_LIMITER_NOT_CONFIGURED', 'ORDER_INGEST_DISABLED']
+    const known = ['UNAUTHENTICATED', 'ADMIN_PERMISSION_DENIED', 'ORDER_NOT_FOUND', 'ORDER_NOT_CANCELLABLE', 'INVALID_ORDER_STATUS', 'INVALID_ORDER_TRANSITION', 'INVALID_DELIVERY_AT', 'DUPLICATE_ORDER', 'DEMO_ORDER_REJECTED', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK', 'GIFTING_OPTION_UNAVAILABLE', 'GIFTING_OPTION_OUT_OF_STOCK', 'INVALID_DELIVERY', 'INVALID_PAYMENT', 'CATALOG_OUT_OF_SYNC', 'REQUEST_BODY_TOO_LARGE', 'RATE_LIMITED', 'RATE_LIMITER_NOT_CONFIGURED', 'ORDER_INGEST_DISABLED']
     const code = known.includes(error?.message) ? error.message : 'INTERNAL_ERROR'
-    const status = code === 'UNAUTHENTICATED' ? 401 : code === 'ADMIN_PERMISSION_DENIED' ? 403 : code === 'DUPLICATE_ORDER' ? 409 : code === 'RATE_LIMITED' ? 429 : code === 'RATE_LIMITER_NOT_CONFIGURED' ? 503 : code === 'ORDER_INGEST_DISABLED' ? 503 : code === 'INTERNAL_ERROR' ? 503 : code === 'REQUEST_BODY_TOO_LARGE' ? 413 : 400
+    const status = code === 'UNAUTHENTICATED' ? 401 : code === 'ADMIN_PERMISSION_DENIED' ? 403 : code === 'ORDER_NOT_FOUND' ? 404 : code === 'DUPLICATE_ORDER' ? 409 : code === 'RATE_LIMITED' ? 429 : code === 'RATE_LIMITER_NOT_CONFIGURED' ? 503 : code === 'ORDER_INGEST_DISABLED' ? 503 : code === 'INTERNAL_ERROR' ? 503 : code === 'REQUEST_BODY_TOO_LARGE' ? 413 : 400
     return send({ error: code }, status)
   }
 }
