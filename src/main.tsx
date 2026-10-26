@@ -22,7 +22,14 @@ const floralFallback = `${import.meta.env.BASE_URL}uploads/floor-232bc/category/
 // Images are either managed store URLs or checked-in local assets. Never turn an
 // opaque database value into a third-party stock-image URL.
 const image = (..._ignored: unknown[]) => logo
-const configuredImage = (value: unknown, fallback: string) => typeof value === 'string' && /^(https?:\/\/|\/)/i.test(value.trim()) ? value.trim() : fallback
+function normalizePublicAssetPath(value: string) {
+  const trimmed = value.trim()
+  // Published Firebase records may still contain the former repository base.
+  // Keep external URLs untouched while making same-origin legacy assets work
+  // on the official custom-domain root.
+  return trimmed.startsWith('/floor/') ? `/${trimmed.slice('/floor/'.length)}` : trimmed
+}
+const configuredImage = (value: unknown, fallback: string) => typeof value === 'string' && /^(https?:\/\/|\/)/i.test(value.trim()) ? normalizePublicAssetPath(value) : fallback
 
 type Product = { id: string; name: string; en: string; price: number; compareAtPrice?: number; discountPercent?: number; category: string; image: string; imageUrls?: string[]; badge?: string; packaging?: string; colors?: string[]; addOns?: string[]; flowerType?: string; occasions?: string[]; featured?: boolean; bestseller?: boolean; isNew?: boolean; stock?: number; tone: string; description: string; demo?: boolean; orderable?: boolean }
 const money = (n: number) => `${n.toLocaleString('en-US')} د.ع`
@@ -54,8 +61,8 @@ function mapCatalogProduct(record: FlowerProductRecord): Product {
     ...(record.isNew ? { isNew: true } : {}),
     ...(typeof record.stock === 'number' ? { stock: record.stock } : {}),
     category: record.category,
-    image: record.image || record.imageUrls?.[0] || fallbackProductImage,
-    ...(record.imageUrls?.length ? { imageUrls: record.imageUrls } : {}),
+    image: configuredImage(record.image || record.imageUrls?.[0], fallbackProductImage),
+    ...(record.imageUrls?.length ? { imageUrls: record.imageUrls.map(normalizePublicAssetPath) } : {}),
     description: record.description || 'منتج متاح من متجر الأساس.',
     tone: '#b7ff2a',
     ...(record.demo ? { demo: true } : {}),

@@ -33,8 +33,8 @@ export function imageUploadConfigured() { return Boolean(endpoint) }
 export function isAllowedPublicAssetUrl(value: string) {
   try {
     const url = new URL(value)
-    const allowedPath = url.pathname.includes('/public/uploads/floor-232bc/') || url.pathname.includes('/floor/uploads/floor-232bc/')
-    return url.protocol === 'https:' && allowedPath && (url.hostname === 'raw.githubusercontent.com' || url.hostname === 'najf8.github.io')
+    const allowedPath = url.pathname.includes('/public/uploads/floor-232bc/') || url.pathname.includes('/uploads/floor-232bc/') || url.pathname.includes('/floor/uploads/floor-232bc/')
+    return url.protocol === 'https:' && allowedPath && (url.hostname === 'raw.githubusercontent.com' || url.hostname === 'najf8.github.io' || url.hostname === 'flowers.alasas.tech')
   } catch { return false }
 }
 

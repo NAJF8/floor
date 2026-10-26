@@ -10,13 +10,13 @@
     <script>
       (function () {
         var path = window.location.pathname;
-        var base = '/floor/';
-        if (path.indexOf(base) !== 0) return;
-        var route = path.slice(base.length).replace(/^\/+|\/+$/g, '');
+        var legacyBase = '/floor/';
+        if (path.indexOf(legacyBase) !== 0) return;
+        var route = path.slice(legacyBase.length).replace(/^\/+|\/+$/g, '');
         if (!route || route.indexOf('admin') === 0) return;
         var query = window.location.search || '';
         var hash = '#/' + route + query + (window.location.hash ? window.location.hash : '');
-        window.location.replace(base + hash);
+        window.location.replace('/' + hash);
       }());
     </script>
   </body>

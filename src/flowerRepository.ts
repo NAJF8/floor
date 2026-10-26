@@ -75,10 +75,10 @@ export type ShopPublicConfig = {
 export const DEFAULT_HOMEPAGE_CONFIG: Record<string, unknown> = {
   heroTitle: 'الهدية الأجمل\nتبدأ بتفاصيلك.',
   heroDescription: 'اختَر باقتك، نسّق ألوانها، وأضف لمستك الخاصة لتصل هديتك كما تخيلتها.',
-  bannerImage: '/floor/alasas-logo.jpg',
+  bannerImage: `${import.meta.env.BASE_URL}alasas-logo.jpg`,
   heroMediaType: 'image',
   heroMediaUrl: '',
-  heroPosterUrl: '/floor/alasas-logo.jpg',
+  heroPosterUrl: `${import.meta.env.BASE_URL}alasas-logo.jpg`,
   heroVideoEnabled: false,
   heroFullWidth: false,
   heroObjectPositionDesktop: 'center',

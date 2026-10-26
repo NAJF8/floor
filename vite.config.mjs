@@ -2,7 +2,8 @@
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/floor/',
+  // The official custom domain serves the customer app from its root.
+  base: '/',
   plugins: [react()],
 })
 

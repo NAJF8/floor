@@ -337,7 +337,7 @@ const orderStatuses = [
 function approvalWhatsAppUrl(item: Row) {
   const phone = valueText(item.phone).replace(/\D/g, '')
   if (!phone) return ''
-  const orderId = valueText(item.id); const customer = valueText(item.customerName || 'زبوننا'); const store = 'AL ASAS'; const tracking = `https://najf8.github.io/floor/#/track-order?order=${encodeURIComponent(orderId)}`
+  const orderId = valueText(item.id); const customer = valueText(item.customerName || 'زبوننا'); const store = 'AL ASAS'; const tracking = `${window.location.origin}${import.meta.env.BASE_URL}#/track-order?order=${encodeURIComponent(orderId)}`
   const message = [`مرحباً ${customer} 🌹`, `تمت الموافقة على طلبك رقم ${orderId}.`, 'تم تأكيد استلام المبلغ من الإدارة.', 'طلبك حالياً قيد التجهيز.', `موعد التوصيل المتوقع: ${valueText(item.deliveryAt || 'سيتم التنسيق معك')}`, `رابط التتبع: ${tracking}`, `شكراً لاختيارك ${store}.`].join('\n')
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 }
@@ -367,7 +367,8 @@ function ReadOnlyPage({ title, eyebrow, description, path }: { title: string; ey
 
 type HeroDraft = Record<string, string>
 const heroFields = ['heroTitle', 'heroDescription', 'bannerImage', 'heroMediaType', 'heroMediaUrl', 'heroPosterUrl', 'heroVideoEnabled', 'heroFullWidth', 'heroObjectPositionDesktop', 'heroObjectPositionTablet', 'heroObjectPositionMobile', 'featuredCategory', 'shopButtonUrl', 'designButtonUrl']
-const emptyHeroDraft: HeroDraft = { heroTitle: 'الهدية الأجمل\nتبدأ بتفاصيلك.', heroDescription: 'اختَر باقتك، نسّق ألوانها، وأضف لمستك الخاصة لتصل هديتك كما تخيلتها.', bannerImage: '/floor/alasas-logo.jpg', heroMediaType: 'image', heroMediaUrl: '', heroPosterUrl: '/floor/alasas-logo.jpg', heroVideoEnabled: 'false', heroFullWidth: 'false', heroObjectPositionDesktop: 'center', heroObjectPositionTablet: 'center', heroObjectPositionMobile: 'center', featuredCategory: '', shopButtonUrl: '/shop', designButtonUrl: '/design-your-bouquet' }
+const emptyHeroAsset = `${import.meta.env.BASE_URL}alasas-logo.jpg`
+const emptyHeroDraft: HeroDraft = { heroTitle: 'الهدية الأجمل\nتبدأ بتفاصيلك.', heroDescription: 'اختَر باقتك، نسّق ألوانها، وأضف لمستك الخاصة لتصل هديتك كما تخيلتها.', bannerImage: emptyHeroAsset, heroMediaType: 'image', heroMediaUrl: '', heroPosterUrl: emptyHeroAsset, heroVideoEnabled: 'false', heroFullWidth: 'false', heroObjectPositionDesktop: 'center', heroObjectPositionTablet: 'center', heroObjectPositionMobile: 'center', featuredCategory: '', shopButtonUrl: '/shop', designButtonUrl: '/design-your-bouquet' }
 export function HomePage() { return <HeroMediaPage /> }
 function HeroMediaPage() {
   const fullPath = pathFor('public/homepage'); const [draft, setDraft] = useState<HeroDraft>({ ...emptyHeroDraft }); const [original, setOriginal] = useState<HeroDraft>({ ...emptyHeroDraft }); const [loaded, setLoaded] = useState(false); const [message, setMessage] = useState(''); const [progress, setProgress] = useState(0)
